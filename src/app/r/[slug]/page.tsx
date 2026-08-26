@@ -15,6 +15,10 @@ import { BookingFlow, type DateOption } from "./booking-flow";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * 店舗ごとのWeb予約ページ。お客様が検索から到達できるよう検索エンジンへの登録を許可する。
+ * （個人情報を含むトークンページ /v /s /c とは異なり、公開情報のみを扱う）
+ */
 export async function generateMetadata({
   params,
 }: {
@@ -23,9 +27,34 @@ export async function generateMetadata({
   const { slug } = await params;
   const store = await prisma.store.findUnique({
     where: { slug },
-    select: { name: true },
+    select: { name: true, description: true, address: true },
   });
-  return { title: store ? `${store.name} ご予約` : "ご予約" };
+
+  if (!store) {
+    return { title: "ご予約", robots: { index: false, follow: false } };
+  }
+
+  const title = `${store.name} ご予約`;
+  const description =
+    store.description.trim() ||
+    `${store.name}のWeb予約ページです。${
+      store.address.trim() ? `${store.address}／` : ""
+    }ご希望の日時とメニューを選んで、24時間いつでもご予約いただけます。`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/r/${slug}` },
+    openGraph: {
+      type: "website",
+      locale: "ja_JP",
+      siteName: store.name,
+      title,
+      description,
+    },
+    twitter: { card: "summary_large_image", title, description },
+    robots: { index: true, follow: true },
+  };
 }
 
 export default async function PublicBookingPage({

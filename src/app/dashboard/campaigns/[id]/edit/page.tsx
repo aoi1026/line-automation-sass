@@ -5,6 +5,9 @@ import { requireSession } from "@/lib/session";
 import { PageHeader } from "@/components/ui/page-header";
 import { CampaignForm } from "../../_components/campaign-form";
 import { loadCampaignFormOptions } from "../../_components/form-options";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "キャンペーンの編集" };
 
 export default async function EditCampaignPage({
   params,

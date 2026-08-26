@@ -18,6 +18,9 @@ import { DeleteCustomerButton } from "../_components/delete-customer-button";
 import { LineLinkCard } from "../_components/line-link-card";
 import { SendMessageDialog } from "../_components/send-message-dialog";
 import { TagsPopover } from "../_components/tags-popover";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "顧客詳細" };
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (

@@ -6,6 +6,9 @@ import { requireSession } from "@/lib/session";
 import { getAppUrl } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { PrintButton } from "./_components/print-button";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "予約QRコード" };
 
 /** 印刷時はダッシュボードのUIを隠し、掲示物だけをA4縦1枚に出力する */
 const PRINT_STYLES = `

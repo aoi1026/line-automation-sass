@@ -7,16 +7,14 @@ import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${APP_NAME}｜${APP_TAGLINE}`,
+    name: APP_NAME,
     short_name: APP_NAME,
-    description:
-      "美容室・ネイルサロン・エステサロンのためのLINE顧客リピート自動化サービス。予約・顧客管理からLINE配信までスマートフォンひとつで。",
+    description: `${APP_TAGLINE}美容室・ネイルサロン・エステサロンのための顧客リピート自動化サービス。予約・顧客管理からLINE配信までスマートフォンひとつで。`,
     lang: "ja",
     dir: "ltr",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
-    orientation: "portrait",
     background_color: "#FFFFFF",
     theme_color: "#06C755",
     categories: ["business", "productivity"],

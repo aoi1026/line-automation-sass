@@ -31,6 +31,9 @@ import {
 } from "@/components/ui/table";
 import { RatingDistributionChart } from "../_components/rating-distribution-chart";
 import { RatingValue } from "../_components/rating-value";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "アンケート結果" };
 
 function excerpt(text: string, max = 40): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;

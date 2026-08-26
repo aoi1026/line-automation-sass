@@ -56,6 +56,14 @@ export const metadata: Metadata = {
     description: OG_DESCRIPTION,
   },
   robots: { index: true, follow: true },
+  // ホーム画面に追加した際の表示（manifest.ts の standalone 設定と揃える）
+  appleWebApp: {
+    capable: true,
+    title: APP_NAME,
+    statusBarStyle: "default",
+  },
+  formatDetection: { telephone: false },
+  category: "business",
 };
 
 export const viewport: Viewport = {

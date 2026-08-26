@@ -19,6 +19,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "セットアップガイド" };
 
 /** 各ステップの見出し（番号・完了バッジ付き） */
 function StepCard({

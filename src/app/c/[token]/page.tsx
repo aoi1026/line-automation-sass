@@ -7,8 +7,14 @@ import { RedeemSection } from "./redeem-section";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * お客様ごとの個別URLのため、検索エンジンには一切登録させない。
+ * （robots.ts でもクロールを禁止しているが、meta でも二重に指定する）
+ */
 export const metadata: Metadata = {
   title: "クーポン",
+  description: "お客様限定のクーポンです。ご来店時にスタッフへご提示ください。",
+  robots: { index: false, follow: false, nocache: true },
 };
 
 export default async function PublicCouponPage({

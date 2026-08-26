@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -35,6 +36,8 @@ import {
   OnboardingChecklist,
   type OnboardingStep,
 } from "./_components/onboarding-checklist";
+
+export const metadata: Metadata = { title: "ダッシュボード" };
 
 export default async function DashboardHomePage() {
   const session = await requireSession();

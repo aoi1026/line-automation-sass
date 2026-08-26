@@ -30,6 +30,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CampaignActions } from "../_components/campaign-detail-actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "キャンペーン詳細" };
 
 export default async function CampaignDetailPage({
   params,

@@ -21,8 +21,14 @@ import { CancelSection } from "./cancel-section";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * お客様ごとの個別URLのため、検索エンジンには一切登録させない。
+ * （robots.ts でもクロールを禁止しているが、meta でも二重に指定する）
+ */
 export const metadata: Metadata = {
   title: "ご予約の確認",
+  description: "ご予約の内容確認とキャンセルのお手続きができます。",
+  robots: { index: false, follow: false, nocache: true },
 };
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {

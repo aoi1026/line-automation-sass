@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { RegisterForm } from "./register-form";
 
-export const metadata: Metadata = { title: `店舗登録 | ${APP_NAME}` };
+export const metadata: Metadata = { title: "店舗登録" };
 
 export default async function SignupPage() {
   const session = await getSession();

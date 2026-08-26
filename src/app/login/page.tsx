@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
 
-export const metadata: Metadata = { title: `ログイン | ${APP_NAME}` };
+export const metadata: Metadata = { title: "ログイン" };
 
 /** オープンリダイレクト防止: ダッシュボード配下のみ許可 */
 function sanitizeNext(next: string | undefined): string {

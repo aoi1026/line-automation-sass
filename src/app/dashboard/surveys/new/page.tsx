@@ -3,6 +3,9 @@ import { requireSession } from "@/lib/session";
 import type { SurveyQuestion } from "@/app/api/surveys/schema";
 import { PageHeader } from "@/components/ui/page-header";
 import { SurveyForm, type SurveyFormInitial } from "../_components/survey-form";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "アンケートの作成" };
 
 const DEFAULT_THANKS_MESSAGE =
   "ご回答ありがとうございました。今後のサービス向上に役立てさせていただきます。";

@@ -27,6 +27,9 @@ import { ReservationKarteCard, type KarteStaffOption } from "./_components/karte
 import { DeleteReservationButton } from "../_components/delete-reservation-button";
 import { ReservationForm } from "../_components/reservation-form";
 import { StatusActions } from "../_components/status-actions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "予約詳細" };
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (

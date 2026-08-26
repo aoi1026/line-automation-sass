@@ -4,6 +4,9 @@ import { requireSession } from "@/lib/session";
 import { parseSurveyQuestions } from "@/app/api/surveys/schema";
 import { PageHeader } from "@/components/ui/page-header";
 import { SurveyForm, type SurveyFormInitial } from "../../_components/survey-form";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "アンケートの編集" };
 
 export default async function EditSurveyPage({
   params,

@@ -2,6 +2,9 @@ import { requireSession } from "@/lib/session";
 import { PageHeader } from "@/components/ui/page-header";
 import { CampaignForm } from "../_components/campaign-form";
 import { loadCampaignFormOptions } from "../_components/form-options";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "キャンペーンの作成" };
 
 export default async function NewCampaignPage({
   searchParams,

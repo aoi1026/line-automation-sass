@@ -29,6 +29,9 @@ import { CouponCard } from "@/app/c/[token]/coupon-card";
 import { CouponFormDialog } from "../_components/coupon-form-dialog";
 import { DeleteCouponButton } from "../_components/delete-coupon-button";
 import { RedeemButton } from "../_components/redeem-button";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "クーポン詳細" };
 
 export default async function CouponDetailPage({
   params,

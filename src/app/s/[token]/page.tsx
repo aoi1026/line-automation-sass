@@ -7,8 +7,14 @@ import { SurveyAnswerForm } from "./survey-answer-form";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * お客様ごとの個別URLのため、検索エンジンには一切登録させない。
+ * （robots.ts でもクロールを禁止しているが、meta でも二重に指定する）
+ */
 export const metadata: Metadata = {
   title: "アンケート",
+  description: "ご来店ありがとうございました。サービス向上のためアンケートにご協力ください。",
+  robots: { index: false, follow: false, nocache: true },
 };
 
 function PublicShell({

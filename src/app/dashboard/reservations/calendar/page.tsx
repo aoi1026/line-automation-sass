@@ -7,6 +7,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { CalendarView } from "./_components/calendar-view";
 import { loadCalendarData, normalizeDate, normalizeView } from "./_components/calendar-data";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "予約カレンダー" };
 
 export default async function ReservationCalendarPage({
   searchParams,

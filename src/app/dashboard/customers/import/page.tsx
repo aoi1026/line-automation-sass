@@ -6,6 +6,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { ImportWizard } from "./_components/import-wizard";
 import { normalizePhone } from "./_components/csv-mapping";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "顧客のインポート" };
 
 export default async function CustomersImportPage() {
   const session = await requireSession();
