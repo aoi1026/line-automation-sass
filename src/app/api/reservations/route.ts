@@ -26,6 +26,8 @@ const createSchema = z.object({
   time: z.string().regex(TIME_RE, "時刻の形式が不正です"),
   price: z.number().int("金額は整数で入力してください").min(0, "金額は0以上で入力してください"),
   note: z.string().max(2000, "メモが長すぎます").optional().default(""),
+  // 店舗登録の予約は未確定でも作成できる（省略時は確定）
+  status: z.enum(["PENDING", "CONFIRMED"]).optional(),
 });
 
 /** 予約一覧を取得（?date=YYYY-MM-DD で日別 / ?status= で絞り込み） */
@@ -98,6 +100,17 @@ export async function POST(req: Request) {
   const startAt = fromJst(data.date, data.time);
   const endAt = addMinutes(startAt, durationMin);
 
+  // 公開予約ページと同じ基準で空き状況を判定し、ダブルブッキングを防ぐ
+  const conflict = await findReservationConflict({
+    storeId: session.storeId,
+    startAt,
+    endAt,
+    staffId,
+  });
+  if (conflict) return jsonError(conflictMessage(conflict), 409);
+
+  const status = data.status ?? "CONFIRMED";
+
   const reservation = await prisma.reservation.create({
     data: {
       storeId: session.storeId,
@@ -106,15 +119,18 @@ export async function POST(req: Request) {
       staffId,
       startAt,
       endAt,
-      status: "CONFIRMED",
+      status,
       source: "MANUAL",
       price: data.price,
       note: data.note,
     },
   });
 
+  // 未確定で作成した場合は確定通知を送らない（確定操作時に送信される）
   // 通知の失敗は予約作成を妨げない（notifyReservationEvent 内部で捕捉される）
-  await notifyReservationEvent(reservation.id, "BOOKING_CONFIRMATION");
+  if (status === "CONFIRMED") {
+    await notifyReservationEvent(reservation.id, "BOOKING_CONFIRMATION");
+  }
 
   return NextResponse.json(reservation);
 }
