@@ -3,9 +3,22 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2, Copy, ExternalLink, Send, TriangleAlert, Unlink } from "lucide-react";
+import {
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  Send,
+  TriangleAlert,
+  Unlink,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -54,11 +67,13 @@ export function LineTab({ line }: { line: LineInfo }) {
         setCustomersError(true);
         return;
       }
-      const data = (await res.json()) as (LinkedCustomer & { lineUserId: string | null })[];
+      const data = (await res.json()) as (LinkedCustomer & {
+        lineUserId: string | null;
+      })[];
       setLinkedCustomers(
         data
           .filter((c) => Boolean(c.lineUserId))
-          .map((c) => ({ id: c.id, name: c.name, kana: c.kana }))
+          .map((c) => ({ id: c.id, name: c.name, kana: c.kana })),
       );
     } catch {
       setCustomersError(true);
@@ -138,7 +153,9 @@ export function LineTab({ line }: { line: LineInfo }) {
         setSecret("");
         router.refresh();
       } else {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         toast.error(data?.error ?? "保存に失敗しました");
       }
     } finally {
@@ -162,7 +179,9 @@ export function LineTab({ line }: { line: LineInfo }) {
         setBasicId("");
         router.refresh();
       } else {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         toast.error(data?.error ?? "解除に失敗しました");
       }
     } finally {
@@ -175,7 +194,10 @@ export function LineTab({ line }: { line: LineInfo }) {
       {/* ステータスバナー */}
       {line.configured ? (
         <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+          <CheckCircle2
+            className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600"
+            aria-hidden="true"
+          />
           <div className="text-sm text-emerald-800">
             <p className="font-semibold">LINE連携済み</p>
             <p className="mt-0.5">メッセージはLINEで実送信されます。</p>
@@ -183,7 +205,10 @@ export function LineTab({ line }: { line: LineInfo }) {
         </div>
       ) : (
         <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
+          <TriangleAlert
+            className="mt-0.5 h-5 w-5 shrink-0 text-amber-600"
+            aria-hidden="true"
+          />
           <div className="text-sm text-amber-800">
             <p className="font-semibold">デモモードで動作中</p>
             <p className="mt-0.5">
@@ -229,20 +254,29 @@ export function LineTab({ line }: { line: LineInfo }) {
               aria-required={line.configured ? undefined : true}
               aria-invalid={tokenError ? true : undefined}
               aria-describedby={
-                tokenError ? "line-token-error line-token-help" : "line-token-help"
+                tokenError
+                  ? "line-token-error line-token-help"
+                  : "line-token-help"
               }
             />
             {tokenError && (
-              <p id="line-token-error" role="alert" className="mt-1 text-xs text-red-600">
+              <p
+                id="line-token-error"
+                role="alert"
+                className="mt-1 text-xs text-red-600"
+              >
                 {tokenError}
               </p>
             )}
             <p id="line-token-help" className="mt-1 text-xs text-gray-500">
-              LINE Developersの「Messaging API設定」で発行できます。保存後は表示されません。
+              LINE Developersの「Messaging
+              API設定」で発行できます。保存後は表示されません。
             </p>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="line-secret">チャネルシークレット（Channel Secret）</Label>
+            <Label htmlFor="line-secret">
+              チャネルシークレット（Channel Secret）
+            </Label>
             <Input
               id="line-secret"
               value={secret}
@@ -298,7 +332,8 @@ export function LineTab({ line }: { line: LineInfo }) {
         <CardHeader>
           <CardTitle>Webhook URL</CardTitle>
           <CardDescription>
-            LINE DevelopersコンソールのWebhook設定に、このURLを登録してください。
+            LINE
+            DevelopersコンソールのWebhook設定に、このURLを登録してください。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -312,7 +347,11 @@ export function LineTab({ line }: { line: LineInfo }) {
               readOnly
               className="bg-gray-50 font-mono text-xs sm:text-sm"
             />
-            <Button variant="outline" onClick={copyWebhookUrl} className="shrink-0">
+            <Button
+              variant="outline"
+              onClick={copyWebhookUrl}
+              className="shrink-0"
+            >
               <Copy aria-hidden="true" />
               コピー
             </Button>
@@ -331,13 +370,18 @@ export function LineTab({ line }: { line: LineInfo }) {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {loadingCustomers ? (
-              <p className="text-sm text-gray-500">送信先のお客様を読み込んでいます…</p>
+              <p className="text-sm text-gray-500">
+                送信先のお客様を読み込んでいます…
+              </p>
             ) : customersError ? (
               <div className="flex flex-col items-start gap-2">
                 <p className="text-sm text-gray-500">
                   お客様の一覧を読み込めませんでした。お手数ですが、もう一度お試しください。
                 </p>
-                <Button variant="outline" onClick={() => void loadLinkedCustomers()}>
+                <Button
+                  variant="outline"
+                  onClick={() => void loadLinkedCustomers()}
+                >
                   再読み込み
                 </Button>
               </div>
@@ -349,7 +393,10 @@ export function LineTab({ line }: { line: LineInfo }) {
               <>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="line-test-customer">送信先のお客様</Label>
-                  <Select value={testCustomerId} onValueChange={setTestCustomerId}>
+                  <Select
+                    value={testCustomerId}
+                    onValueChange={setTestCustomerId}
+                  >
                     <SelectTrigger id="line-test-customer" className="max-w-sm">
                       <SelectValue placeholder="LINE連携済みのお客様を選択" />
                     </SelectTrigger>
@@ -367,7 +414,10 @@ export function LineTab({ line }: { line: LineInfo }) {
                   </p>
                 </div>
                 <div>
-                  <Button onClick={sendTest} disabled={!testCustomerId || testing}>
+                  <Button
+                    onClick={sendTest}
+                    disabled={!testCustomerId || testing}
+                  >
                     <Send aria-hidden="true" />
                     {testing ? "送信中…" : "テストを送信"}
                   </Button>
@@ -382,7 +432,9 @@ export function LineTab({ line }: { line: LineInfo }) {
       <Card>
         <CardHeader>
           <CardTitle>連携手順</CardTitle>
-          <CardDescription>初めて設定する場合は、以下の手順で進めてください。</CardDescription>
+          <CardDescription>
+            初めて設定する場合は、以下の手順で進めてください。
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-gray-700">
@@ -390,7 +442,10 @@ export function LineTab({ line }: { line: LineInfo }) {
             <li>
               チャネルアクセストークン（長期）とチャネルシークレットを取得し、上のフォームで保存します。
             </li>
-            <li>上記のWebhook URLをチャネルのWebhook設定に登録し、Webhookを有効化します。</li>
+            <li>
+              上記のWebhook
+              URLをチャネルのWebhook設定に登録し、Webhookを有効化します。
+            </li>
             <li>LINE公式アカウントの応答メッセージをオフにします。</li>
           </ol>
           <a
@@ -415,7 +470,11 @@ export function LineTab({ line }: { line: LineInfo }) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUnlinkOpen(false)} disabled={unlinking}>
+            <Button
+              variant="outline"
+              onClick={() => setUnlinkOpen(false)}
+              disabled={unlinking}
+            >
               キャンセル
             </Button>
             <Button variant="destructive" onClick={unlink} disabled={unlinking}>

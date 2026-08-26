@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -38,12 +44,17 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StaffRow | null>(null);
-  const [form, setForm] = useState<FormState>({ name: "", title: "", sortOrder: "0" });
+  const [form, setForm] = useState<FormState>({
+    name: "",
+    title: "",
+    sortOrder: "0",
+  });
   const [nameError, setNameError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const set = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
+  const set = (patch: Partial<FormState>) =>
+    setForm((prev) => ({ ...prev, ...patch }));
 
   const openAdd = () => {
     setEditing(null);
@@ -55,7 +66,11 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
   const openEdit = (staff: StaffRow) => {
     setEditing(staff);
     setNameError(null);
-    setForm({ name: staff.name, title: staff.title, sortOrder: String(staff.sortOrder) });
+    setForm({
+      name: staff.name,
+      title: staff.title,
+      sortOrder: String(staff.sortOrder),
+    });
     setDialogOpen(true);
   };
 
@@ -90,11 +105,15 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
             body,
           });
       if (res.ok) {
-        toast.success(editing ? "スタッフ情報を更新しました" : "スタッフを追加しました");
+        toast.success(
+          editing ? "スタッフ情報を更新しました" : "スタッフを追加しました",
+        );
         setDialogOpen(false);
         router.refresh();
       } else {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         toast.error(data?.error ?? "保存に失敗しました");
       }
     } finally {
@@ -109,17 +128,21 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
       body: JSON.stringify({ active }),
     });
     if (res.ok) {
-      toast.success(active ? "スタッフを有効にしました" : "スタッフを無効にしました");
+      toast.success(
+        active ? "スタッフを有効にしました" : "スタッフを無効にしました",
+      );
       router.refresh();
     } else {
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       toast.error(data?.error ?? "更新に失敗しました");
     }
   };
 
   const remove = async (staff: StaffRow) => {
     const ok = window.confirm(
-      `「${staff.name}」を削除します。\nWeb予約ページの担当者一覧から表示されなくなり、お客様は指名できなくなります。\n過去の予約履歴はそのまま残ります。`
+      `「${staff.name}」を削除します。\nWeb予約ページの担当者一覧から表示されなくなり、お客様は指名できなくなります。\n過去の予約履歴はそのまま残ります。`,
     );
     if (!ok) return;
     setDeletingId(staff.id);
@@ -129,7 +152,9 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
         toast.success("スタッフを削除しました");
         router.refresh();
       } else {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         toast.error(data?.error ?? "削除に失敗しました");
       }
     } finally {
@@ -179,14 +204,20 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
             <TableBody>
               {staffMembers.map((staff) => (
                 <TableRow key={staff.id}>
-                  <TableCell className="font-medium text-gray-900">{staff.name}</TableCell>
+                  <TableCell className="font-medium text-gray-900">
+                    {staff.name}
+                  </TableCell>
                   <TableCell className="text-gray-700">
-                    {staff.title || <span className="text-gray-400">未設定</span>}
+                    {staff.title || (
+                      <span className="text-gray-400">未設定</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Switch
                       checked={staff.active}
-                      onCheckedChange={(checked) => toggleActive(staff, checked)}
+                      onCheckedChange={(checked) =>
+                        toggleActive(staff, checked)
+                      }
                       aria-label={`${staff.name}をWeb予約ページに表示する`}
                     />
                   </TableCell>
@@ -225,7 +256,9 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? "スタッフを編集" : "スタッフを追加"}</DialogTitle>
+            <DialogTitle>
+              {editing ? "スタッフを編集" : "スタッフを追加"}
+            </DialogTitle>
             <DialogDescription>
               {editing
                 ? "スタッフの情報を変更できます。"
@@ -252,11 +285,17 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
                 aria-required="true"
                 aria-invalid={nameError ? true : undefined}
                 aria-describedby={
-                  nameError ? "staff-name-error staff-name-help" : "staff-name-help"
+                  nameError
+                    ? "staff-name-error staff-name-help"
+                    : "staff-name-help"
                 }
               />
               {nameError && (
-                <p id="staff-name-error" role="alert" className="mt-1 text-xs text-red-600">
+                <p
+                  id="staff-name-error"
+                  role="alert"
+                  className="mt-1 text-xs text-red-600"
+                >
                   {nameError}
                 </p>
               )}
@@ -296,7 +335,11 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              disabled={saving}
+            >
               キャンセル
             </Button>
             <Button onClick={submit} disabled={saving}>

@@ -7,6 +7,7 @@ import { CalendarClock, Pencil, Send, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { CampaignStatus } from "@prisma/client";
 import { addHours } from "@/lib/jst";
+import { formatNumber } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -75,18 +76,26 @@ export function CampaignActions({
   }
 
   async function handleSendNow() {
-    if (!window.confirm(`「${campaign.title}」を今すぐ配信します。よろしいですか？`)) return;
+    const ok = window.confirm(
+      `「${campaign.title}」を今すぐ配信します。\n対象のお客様のLINEへメッセージが送信され、送信後の取り消しはできません。`,
+    );
+    if (!ok) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/campaigns/${campaign.id}/send`, { method: "POST" });
-      const data: { error?: string; sent?: number; skipped?: number } = await res
-        .json()
-        .catch(() => ({}));
+      const res = await fetch(`/api/campaigns/${campaign.id}/send`, {
+        method: "POST",
+      });
+      const data: { error?: string; sent?: number; skipped?: number } =
+        await res.json().catch(() => ({}));
       if (!res.ok) {
         toast.error(data.error ?? "配信に失敗しました");
         return;
       }
-      toast.success(`配信が完了しました（送信${data.sent ?? 0}件・スキップ${data.skipped ?? 0}件）`);
+      toast.success(
+        `配信が完了しました（送信${formatNumber(data.sent ?? 0)}件・スキップ${formatNumber(
+          data.skipped ?? 0,
+        )}件）`,
+      );
       router.refresh();
     } finally {
       setBusy(false);
@@ -94,7 +103,10 @@ export function CampaignActions({
   }
 
   async function handleCancel() {
-    if (!window.confirm(`「${campaign.title}」の配信予約を中止します。よろしいですか？`)) return;
+    const ok = window.confirm(
+      `「${campaign.title}」の配信予約を中止します。\n予約した日時になってもメッセージは送信されません。内容は下書きとして残ります。`,
+    );
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/campaigns/${campaign.id}`, {
@@ -115,10 +127,15 @@ export function CampaignActions({
   }
 
   async function handleDelete() {
-    if (!window.confirm(`「${campaign.title}」を削除します。よろしいですか？`)) return;
+    const ok = window.confirm(
+      `「${campaign.title}」を削除します。\n本文と配信対象の設定は失われ、元に戻せません。`,
+    );
+    if (!ok) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/campaigns/${campaign.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/campaigns/${campaign.id}`, {
+        method: "DELETE",
+      });
       if (!res.ok) {
         const data: { error?: string } = await res.json().catch(() => ({}));
         toast.error(data.error ?? "削除に失敗しました");
@@ -140,21 +157,39 @@ export function CampaignActions({
       {status === "DRAFT" && (
         <Link
           href={`/dashboard/campaigns/${campaign.id}/edit`}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={buttonVariants({
+            variant: "outline",
+            size: "sm",
+            className: "h-11",
+          })}
+          aria-label={`「${campaign.title}」を編集`}
         >
-          <Pencil />
+          <Pencil aria-hidden="true" />
           編集
         </Link>
       )}
       {status === "DRAFT" && (
-        <Button variant="outline" size="sm" onClick={openSchedule} disabled={busy}>
-          <CalendarClock />
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-11"
+          onClick={openSchedule}
+          disabled={busy}
+          aria-label={`「${campaign.title}」の配信を予約`}
+        >
+          <CalendarClock aria-hidden="true" />
           配信予約
         </Button>
       )}
       {(status === "DRAFT" || status === "SCHEDULED") && (
-        <Button size="sm" onClick={handleSendNow} disabled={busy}>
-          <Send />
+        <Button
+          size="sm"
+          className="h-11"
+          onClick={handleSendNow}
+          disabled={busy}
+          aria-label={`「${campaign.title}」を今すぐ配信`}
+        >
+          <Send aria-hidden="true" />
           今すぐ配信
         </Button>
       )}
@@ -162,11 +197,12 @@ export function CampaignActions({
         <Button
           variant="ghost"
           size="sm"
-          className="text-red-600 hover:bg-red-50 hover:text-red-700"
+          className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
           onClick={handleCancel}
           disabled={busy}
+          aria-label={`「${campaign.title}」の配信予約を中止`}
         >
-          <XCircle />
+          <XCircle aria-hidden="true" />
           中止
         </Button>
       )}
@@ -174,11 +210,12 @@ export function CampaignActions({
         <Button
           variant="ghost"
           size="sm"
-          className="text-red-600 hover:bg-red-50 hover:text-red-700"
+          className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
           onClick={handleDelete}
           disabled={busy}
+          aria-label={`「${campaign.title}」を削除`}
         >
-          <Trash2 />
+          <Trash2 aria-hidden="true" />
           削除
         </Button>
       )}
@@ -192,17 +229,35 @@ export function CampaignActions({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
-            <Label htmlFor="campaign-scheduled-at">配信予定日時</Label>
+            <Label htmlFor="campaign-scheduled-at">
+              配信予定日時
+              <span className="ml-0.5 text-red-500" aria-hidden="true">
+                *
+              </span>
+            </Label>
             <Input
               id="campaign-scheduled-at"
               type="datetime-local"
               min={nowJstInput()}
               value={scheduledLocal}
               onChange={(e) => setScheduledLocal(e.target.value)}
+              required
+              aria-required="true"
+              aria-describedby="campaign-scheduled-at-help"
             />
+            <p
+              id="campaign-scheduled-at-help"
+              className="text-xs text-gray-500"
+            >
+              日本時間でご指定ください。現在より後の日時のみ設定できます。
+            </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setScheduleOpen(false)} disabled={busy}>
+            <Button
+              variant="outline"
+              onClick={() => setScheduleOpen(false)}
+              disabled={busy}
+            >
               キャンセル
             </Button>
             <Button onClick={handleSchedule} disabled={busy}>

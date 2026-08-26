@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Copy, ExternalLink } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,8 +34,12 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
   const [phone, setPhone] = useState(storeInfo.phone);
   const [address, setAddress] = useState(storeInfo.address);
   const [description, setDescription] = useState(storeInfo.description);
-  const [slotIntervalMin, setSlotIntervalMin] = useState(String(storeInfo.slotIntervalMin));
-  const [rebookingDays, setRebookingDays] = useState(String(storeInfo.defaultRebookingIntervalDays));
+  const [slotIntervalMin, setSlotIntervalMin] = useState(
+    String(storeInfo.slotIntervalMin),
+  );
+  const [rebookingDays, setRebookingDays] = useState(
+    String(storeInfo.defaultRebookingIntervalDays),
+  );
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
 
@@ -75,7 +85,9 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
         toast.success("店舗情報を保存しました");
         router.refresh();
       } else {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         toast.error(body?.error ?? "保存に失敗しました");
       }
     } finally {
@@ -88,7 +100,9 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
       <Card>
         <CardHeader>
           <CardTitle>店舗情報</CardTitle>
-          <CardDescription>お客様への表示や予約枠の計算に使用されます。</CardDescription>
+          <CardDescription>
+            お客様への表示や予約枠の計算に使用されます。
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -104,7 +118,8 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
-                  if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+                  if (errors.name)
+                    setErrors((prev) => ({ ...prev, name: undefined }));
                 }}
                 placeholder="例: リピナビサロン 表参道店"
                 required
@@ -113,7 +128,11 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
                 aria-describedby={errors.name ? "store-name-error" : undefined}
               />
               {errors.name && (
-                <p id="store-name-error" role="alert" className="mt-1 text-xs text-red-600">
+                <p
+                  id="store-name-error"
+                  role="alert"
+                  className="mt-1 text-xs text-red-600"
+                >
                   {errors.name}
                 </p>
               )}
@@ -152,15 +171,24 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
               placeholder="お店の特徴やこだわりをご記入ください。Web予約ページに表示されます。"
               aria-describedby="store-description-help"
             />
-            <p id="store-description-help" className="mt-1 text-xs text-gray-500">
+            <p
+              id="store-description-help"
+              className="mt-1 text-xs text-gray-500"
+            >
               Web予約ページの冒頭に表示されます。
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="store-slot-interval">予約枠の間隔</Label>
-              <Select value={slotIntervalMin} onValueChange={setSlotIntervalMin}>
-                <SelectTrigger id="store-slot-interval" aria-describedby="store-slot-interval-help">
+              <Select
+                value={slotIntervalMin}
+                onValueChange={setSlotIntervalMin}
+              >
+                <SelectTrigger
+                  id="store-slot-interval"
+                  aria-describedby="store-slot-interval-help"
+                >
                   <SelectValue placeholder="選択してください" />
                 </SelectTrigger>
                 <SelectContent>
@@ -171,7 +199,10 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
                   ))}
                 </SelectContent>
               </Select>
-              <p id="store-slot-interval-help" className="mt-1 text-xs text-gray-500">
+              <p
+                id="store-slot-interval-help"
+                className="mt-1 text-xs text-gray-500"
+              >
                 Web予約ページで表示する時間の刻みです。30分なら10:00・10:30…と表示されます。
               </p>
             </div>
@@ -193,7 +224,10 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
                   onChange={(e) => {
                     setRebookingDays(e.target.value);
                     if (errors.rebookingDays) {
-                      setErrors((prev) => ({ ...prev, rebookingDays: undefined }));
+                      setErrors((prev) => ({
+                        ...prev,
+                        rebookingDays: undefined,
+                      }));
                     }
                   }}
                   className="w-28"
@@ -217,7 +251,10 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
                   {errors.rebookingDays}
                 </p>
               )}
-              <p id="store-rebooking-days-help" className="mt-1 text-xs text-gray-500">
+              <p
+                id="store-rebooking-days-help"
+                className="mt-1 text-xs text-gray-500"
+              >
                 メニューごとの推奨間隔が未設定の場合に使用されます。
               </p>
             </div>

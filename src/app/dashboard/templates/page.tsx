@@ -49,7 +49,9 @@ export default async function TemplatesPage() {
               <section key={kind}>
                 <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
                   {MESSAGE_KIND_LABELS[kind]}
-                  <span className="text-xs font-normal text-gray-400">{items.length}件</span>
+                  <span className="text-xs font-normal text-gray-400">
+                    {items.length}件
+                  </span>
                 </h2>
                 {items.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-500">

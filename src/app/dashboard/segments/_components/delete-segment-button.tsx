@@ -7,13 +7,19 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 /** セグメント削除ボタン（確認ダイアログつき） */
-export function DeleteSegmentButton({ id, name }: { id: string; name: string }) {
+export function DeleteSegmentButton({
+  id,
+  name,
+}: {
+  id: string;
+  name: string;
+}) {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
 
   async function handleDelete() {
     const ok = window.confirm(
-      `セグメント「${name}」を削除します。\nこのセグメントを配信対象にしている未送信のキャンペーンは対象の設定が解除され、全顧客が対象になります。\nお客様の情報は削除されません。`
+      `セグメント「${name}」を削除します。\nこのセグメントを配信対象にしている未送信のキャンペーンは対象の設定が解除され、全顧客が対象になります。\nお客様の情報は削除されません。`,
     );
     if (!ok) return;
     setBusy(true);

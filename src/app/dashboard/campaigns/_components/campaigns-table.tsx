@@ -3,7 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { CampaignStatus } from "@prisma/client";
-import { CAMPAIGN_STATUS_COLORS, CAMPAIGN_STATUS_LABELS } from "@/lib/constants";
+import {
+  CAMPAIGN_STATUS_COLORS,
+  CAMPAIGN_STATUS_LABELS,
+} from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -28,9 +31,13 @@ export type CampaignRow = {
   sendLabel: string;
 };
 
-/** キャンペーン一覧テーブル（行クリックで詳細へ） */
+/** キャンペーン一覧テーブル（行クリック・Enterキーで詳細へ） */
 export function CampaignsTable({ rows }: { rows: CampaignRow[] }) {
   const router = useRouter();
+
+  function open(id: string) {
+    router.push(`/dashboard/campaigns/${id}`);
+  }
 
   return (
     <Card>
@@ -50,8 +57,17 @@ export function CampaignsTable({ rows }: { rows: CampaignRow[] }) {
             {rows.map((row) => (
               <TableRow
                 key={row.id}
-                className="cursor-pointer"
-                onClick={() => router.push(`/dashboard/campaigns/${row.id}`)}
+                tabIndex={0}
+                aria-label={`${row.title}の詳細を開く`}
+                className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50"
+                onClick={() => open(row.id)}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    open(row.id);
+                  }
+                }}
               >
                 <TableCell className="max-w-[16rem] truncate font-medium text-gray-900">
                   {row.title}
@@ -67,7 +83,9 @@ export function CampaignsTable({ rows }: { rows: CampaignRow[] }) {
                 <TableCell className="whitespace-nowrap text-gray-600">
                   {row.scheduleLabel}
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-gray-600">{row.sendLabel}</TableCell>
+                <TableCell className="whitespace-nowrap text-gray-600">
+                  {row.sendLabel}
+                </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <div className="flex justify-end">
                     <CampaignActions campaign={row} />

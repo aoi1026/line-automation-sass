@@ -170,6 +170,7 @@ export default async function PublicBookingPage({
         <BookingFlow
           slug={store.slug}
           storeName={store.name}
+          storePhone={store.phone}
           services={services}
           staff={staff}
           dates={dates}

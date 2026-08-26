@@ -51,7 +51,9 @@ export default async function CouponDetailPage({
   if (!coupon) notFound();
 
   const issuedCount = coupon.issues.length;
-  const usedCount = coupon.issues.filter((issue) => issue.usedAt !== null).length;
+  const usedCount = coupon.issues.filter(
+    (issue) => issue.usedAt !== null,
+  ).length;
   const usageRate = issuedCount > 0 ? usedCount / issuedCount : null;
 
   return (
@@ -75,12 +77,15 @@ export default async function CouponDetailPage({
               }}
               trigger={
                 <Button type="button" variant="outline">
-                  <Pencil />
+                  <Pencil aria-hidden="true" />
                   編集
                 </Button>
               }
             />
-            <DeleteCouponButton couponId={coupon.id} couponTitle={coupon.title} />
+            <DeleteCouponButton
+              couponId={coupon.id}
+              couponTitle={coupon.title}
+            />
           </div>
         }
       />
@@ -90,7 +95,9 @@ export default async function CouponDetailPage({
         <Card>
           <CardHeader>
             <CardTitle className="text-base">プレビュー</CardTitle>
-            <CardDescription>お客様に届くクーポン表示ページと同じ見た目です。</CardDescription>
+            <CardDescription>
+              お客様に届くクーポン表示ページと同じ見た目です。
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="mx-auto max-w-sm rounded-xl bg-gray-50 p-4 sm:p-6">
@@ -111,12 +118,23 @@ export default async function CouponDetailPage({
         </Card>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <StatCard label="発行数" value={`${formatNumber(issuedCount)}件`} icon={<Ticket />} />
-          <StatCard label="利用数" value={`${formatNumber(usedCount)}件`} icon={<TicketCheck />} />
+          <StatCard
+            label="発行数"
+            value={`${formatNumber(issuedCount)}件`}
+            icon={<Ticket aria-hidden="true" />}
+          />
+          <StatCard
+            label="利用数"
+            value={`${formatNumber(usedCount)}件`}
+            icon={<TicketCheck aria-hidden="true" />}
+          />
           <StatCard
             label="利用率"
             value={usageRate === null ? "—" : formatPercent(usageRate)}
-            icon={<Percent />}
+            sub={
+              usageRate === null ? "発行実績がありません" : "利用数 ÷ 発行数"
+            }
+            icon={<Percent aria-hidden="true" />}
           />
         </div>
 
@@ -130,7 +148,7 @@ export default async function CouponDetailPage({
           <CardContent>
             {coupon.issues.length === 0 ? (
               <EmptyState
-                icon={<Ticket />}
+                icon={<Ticket aria-hidden="true" />}
                 title="まだ発行されていません"
                 description="来店お礼・誕生日メッセージなどの自動配信やキャンペーンにこのクーポンを添付すると、送信時に発行されます。"
               />
@@ -160,7 +178,9 @@ export default async function CouponDetailPage({
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {issue.usedAt ? (
-                          <span className="text-gray-600">{formatJstDateTime(issue.usedAt)}</span>
+                          <span className="text-gray-600">
+                            {formatJstDateTime(issue.usedAt)}
+                          </span>
                         ) : (
                           <Badge variant="outline">未使用</Badge>
                         )}

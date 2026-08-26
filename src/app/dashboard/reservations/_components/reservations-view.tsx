@@ -145,7 +145,7 @@ export function ReservationsView({
               type="button"
               onClick={() => navigate({ status: "PENDING" })}
               aria-label={`未確定の予約${formatNumber(pendingCount)}件のみ表示`}
-              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+              className="inline-flex h-10 items-center rounded-full px-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
             >
               <Badge className={RESERVATION_STATUS_COLORS.PENDING}>
                 未確定 {formatNumber(pendingCount)}件
@@ -185,7 +185,12 @@ export function ReservationsView({
       </p>
 
       {view === "day" ? (
-        <DayView rows={dayRows} status={status} createAction={createAction} />
+        <DayView
+          rows={dayRows}
+          status={status}
+          createAction={createAction}
+          onResetFilter={() => navigate({ status: "ALL" })}
+        />
       ) : (
         <WeekView
           days={weekDays}
@@ -201,10 +206,12 @@ function DayView({
   rows,
   status,
   createAction,
+  onResetFilter,
 }: {
   rows: ReservationRow[];
   status: StatusFilter;
   createAction?: React.ReactNode;
+  onResetFilter: () => void;
 }) {
   if (rows.length === 0) {
     // 絞り込み中は「条件に合う予約がない」ことを伝える（登録を促さない）
@@ -213,7 +220,12 @@ function DayView({
         <EmptyState
           icon={<CalendarX2 aria-hidden="true" />}
           title="条件に合う予約がありません"
-          description={`この日に「${RESERVATION_STATUS_LABELS[status]}」の予約はありません。ステータスの絞り込みを「すべて」に戻すと、ほかの予約を確認できます。`}
+          description={`この日に「${RESERVATION_STATUS_LABELS[status]}」の予約はありません。絞り込みを解除すると、ほかの予約を確認できます。`}
+          action={
+            <Button variant="outline" size="sm" onClick={onResetFilter}>
+              絞り込みを解除
+            </Button>
+          }
         />
       );
     }

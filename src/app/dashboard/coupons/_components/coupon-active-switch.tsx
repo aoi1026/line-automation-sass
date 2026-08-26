@@ -9,9 +9,12 @@ import { Switch } from "@/components/ui/switch";
 export function CouponActiveSwitch({
   couponId,
   active,
+  couponTitle,
 }: {
   couponId: string;
   active: boolean;
+  /** 読み上げ用のクーポン名（省略時は汎用ラベル） */
+  couponTitle?: string;
 }) {
   const router = useRouter();
   const [checked, setChecked] = React.useState(active);
@@ -26,7 +29,9 @@ export function CouponActiveSwitch({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ active: next }),
       });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       if (!res.ok) {
         setChecked(!next);
         toast.error(data?.error ?? "更新に失敗しました");
@@ -44,7 +49,11 @@ export function CouponActiveSwitch({
       checked={checked}
       onCheckedChange={handleChange}
       disabled={pending}
-      aria-label="クーポンの有効/無効"
+      aria-label={
+        couponTitle
+          ? `クーポン「${couponTitle}」を有効にする`
+          : "クーポンを有効にする"
+      }
     />
   );
 }

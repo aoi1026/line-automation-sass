@@ -25,12 +25,16 @@ export function RedeemButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       if (!res.ok) {
         toast.error(data?.error ?? "更新に失敗しました");
         return;
       }
-      toast.success(action === "redeem" ? "使用済みにしました" : "未使用に戻しました");
+      toast.success(
+        action === "redeem" ? "使用済みにしました" : "未使用に戻しました",
+      );
       router.refresh();
     } finally {
       setPending(false);
@@ -44,17 +48,23 @@ export function RedeemButton({
         size="sm"
         onClick={handleClick}
         disabled={pending}
-        className="text-gray-500"
+        className="h-11 text-gray-500"
       >
-        <RotateCcw />
+        <RotateCcw aria-hidden="true" />
         {pending ? "処理中…" : "取り消す"}
       </Button>
     );
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={handleClick} disabled={pending}>
-      <CheckCircle2 />
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-11"
+      onClick={handleClick}
+      disabled={pending}
+    >
+      <CheckCircle2 aria-hidden="true" />
       {pending ? "処理中…" : "使用済みにする"}
     </Button>
   );

@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { formatNumber } from "@/lib/utils";
 
 export type RatingDistributionPoint = {
   /** 評価ラベル（例: "★1"〜"★5"） */
@@ -18,11 +19,27 @@ export type RatingDistributionPoint = {
 };
 
 /** 5段階評価の1〜5分布バーチャート */
-export function RatingDistributionChart({ data }: { data: RatingDistributionPoint[] }) {
+export function RatingDistributionChart({
+  data,
+}: {
+  data: RatingDistributionPoint[];
+}) {
+  const summary = data
+    .map((d) => `${d.label} ${formatNumber(d.count)}件`)
+    .join("、");
+
   return (
-    <div className="h-48 w-full">
+    // グラフ自体は読み上げられないため、内容を要約したラベルを付ける
+    <div
+      className="h-48 w-full"
+      role="img"
+      aria-label={`評価ごとの回答数: ${summary}`}
+    >
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
+        <BarChart
+          data={data}
+          margin={{ top: 16, right: 8, left: 0, bottom: 0 }}
+        >
           <CartesianGrid vertical={false} stroke="#f3f4f6" />
           <XAxis
             dataKey="label"
@@ -48,13 +65,21 @@ export function RatingDistributionChart({ data }: { data: RatingDistributionPoin
               boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
             }}
           />
-          <Bar dataKey="count" name="回答数" fill="#04a53f" maxBarSize={28} radius={[4, 4, 0, 0]}>
+          <Bar
+            dataKey="count"
+            name="回答数"
+            fill="#05a648"
+            maxBarSize={28}
+            radius={[4, 4, 0, 0]}
+          >
             <LabelList
               dataKey="count"
               position="top"
               fontSize={11}
               fill="#374151"
-              formatter={(value: unknown) => (Number(value) > 0 ? String(value) : "")}
+              formatter={(value: unknown) =>
+                Number(value) > 0 ? String(value) : ""
+              }
             />
           </Bar>
         </BarChart>

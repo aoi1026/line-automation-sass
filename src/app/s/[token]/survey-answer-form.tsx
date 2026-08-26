@@ -166,13 +166,13 @@ export function SurveyAnswerForm({
                     htmlFor={`q-${question.id}-input`}
                     className="block text-sm font-medium text-gray-900"
                   >
-                    <span className="text-gray-400">Q{index + 1}. </span>
+                    <span className="text-gray-400">{index + 1}. </span>
                     {question.label}
                     {question.required && <RequiredMark />}
                   </label>
                 ) : (
                   <p id={labelId} className="text-sm font-medium text-gray-900">
-                    <span className="text-gray-400">Q{index + 1}. </span>
+                    <span className="text-gray-400">{index + 1}. </span>
                     {question.label}
                     {question.required && <RequiredMark />}
                   </p>
