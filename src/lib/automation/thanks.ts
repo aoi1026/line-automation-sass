@@ -19,7 +19,9 @@ export async function runThanks(store: Store, now: Date): Promise<KindCounts> {
     setting.offsetUnit === "hours"
       ? addHours(now, -setting.offsetValue)
       : addDays(now, -setting.offsetValue);
-  const lookbackStart = addDays(now, -7);
+  // 送り漏れの取りこぼしに備え、送信予定時刻（dueBefore）から7日前まで遡る。
+  // now を基準にすると offsetValue が7日以上のとき範囲が空になり、一度も送信されない。
+  const lookbackStart = addDays(dueBefore, -7);
 
   const reservations = await prisma.reservation.findMany({
     where: {

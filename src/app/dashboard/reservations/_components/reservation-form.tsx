@@ -153,6 +153,7 @@ export function ReservationForm({
         note,
       };
       if (mode === "create") payload.status = status;
+      else payload.action = "update";
 
       const res = await fetch(
         mode === "create" ? "/api/reservations" : `/api/reservations/${excludeId}`,

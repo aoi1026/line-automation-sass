@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getApiSession, jsonError, notFound, parseBody, unauthorized } from "@/lib/api";
 import { fromJst } from "@/lib/jst";
 import { notifyReservationEvent } from "@/lib/messaging";
+import { conflictMessage, findReservationConflict } from "@/lib/availability";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -21,6 +22,17 @@ const patchSchema = z.discriminatedUnion("action", [
     action: z.literal("reschedule"),
     date: z.string().regex(DATE_RE, "日付の形式が不正です"),
     time: z.string().regex(TIME_RE, "時刻の形式が不正です"),
+  }),
+  // 予約内容の編集（顧客・メニュー・担当・日時・料金・メモ）
+  z.object({
+    action: z.literal("update"),
+    customerId: z.string().min(1, "顧客を選択してください"),
+    serviceId: z.string().nullable().optional(),
+    staffId: z.string().nullable().optional(),
+    date: z.string().regex(DATE_RE, "日付の形式が不正です"),
+    time: z.string().regex(TIME_RE, "時刻の形式が不正です"),
+    price: z.number().int().min(0, "料金は0以上で入力してください"),
+    note: z.string().max(1000, "メモが長すぎます").optional(),
   }),
 ]);
 
@@ -165,11 +177,89 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       const durationMs = reservation.endAt.getTime() - reservation.startAt.getTime();
       const startAt = fromJst(data.date, data.time);
       const endAt = new Date(startAt.getTime() + durationMs);
+
+      const conflict = await findReservationConflict({
+        storeId: session.storeId,
+        startAt,
+        endAt,
+        staffId: reservation.staffId,
+        excludeReservationId: reservation.id,
+      });
+      if (conflict) return jsonError(conflictMessage(conflict));
+
       const updated = await prisma.reservation.update({
         where: { id: reservation.id },
         data: { startAt, endAt },
       });
       await notifyReservationEvent(reservation.id, "RESCHEDULE");
+      return NextResponse.json(updated);
+    }
+
+    // 予約内容の編集（来店済みも記録訂正のため編集可。キャンセル済みは不可）
+    case "update": {
+      if (!isActive && reservation.status !== "COMPLETED") return invalidTransition();
+
+      // 参照先がすべて自店舗のものであることを確認
+      const [customer, service, staff] = await Promise.all([
+        prisma.customer.findFirst({
+          where: { id: data.customerId, storeId: session.storeId },
+          select: { id: true },
+        }),
+        data.serviceId
+          ? prisma.service.findFirst({
+              where: { id: data.serviceId, storeId: session.storeId },
+              select: { id: true, durationMin: true },
+            })
+          : Promise.resolve(null),
+        data.staffId
+          ? prisma.staffMember.findFirst({
+              where: { id: data.staffId, storeId: session.storeId },
+              select: { id: true },
+            })
+          : Promise.resolve(null),
+      ]);
+      if (!customer) return jsonError("顧客が見つかりません");
+      if (data.serviceId && !service) return jsonError("メニューが見つかりません");
+      if (data.staffId && !staff) return jsonError("担当者が見つかりません");
+
+      // メニュー変更時は所要時間を新しいメニューから取り直す
+      const durationMs = service
+        ? service.durationMin * 60_000
+        : reservation.endAt.getTime() - reservation.startAt.getTime();
+      const startAt = fromJst(data.date, data.time);
+      const endAt = new Date(startAt.getTime() + durationMs);
+
+      // 変更後の枠が空いているか（来店済みの記録訂正では判定しない）
+      if (isActive) {
+        const conflict = await findReservationConflict({
+          storeId: session.storeId,
+          startAt,
+          endAt,
+          staffId: data.staffId ?? null,
+          excludeReservationId: reservation.id,
+        });
+        if (conflict) return jsonError(conflictMessage(conflict));
+      }
+
+      const updated = await prisma.reservation.update({
+        where: { id: reservation.id },
+        data: {
+          customerId: data.customerId,
+          serviceId: data.serviceId ?? null,
+          staffId: data.staffId ?? null,
+          startAt,
+          endAt,
+          price: data.price,
+          note: data.note ?? "",
+        },
+      });
+
+      // 日時が実際に変わった確定済み予約のときだけ日時変更通知を送る
+      // （料金やメモの修正のたびにお客様へ通知しないため）
+      const datetimeChanged = startAt.getTime() !== reservation.startAt.getTime();
+      if (datetimeChanged && reservation.status === "CONFIRMED") {
+        await notifyReservationEvent(reservation.id, "RESCHEDULE");
+      }
       return NextResponse.json(updated);
     }
   }

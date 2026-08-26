@@ -303,7 +303,7 @@ function GridColumnBody({
       {/* 現在時刻 */}
       {nowTop !== null && (
         <div
-          className="pointer-events-none absolute inset-x-0 z-20 border-t-2 border-red-500"
+          className="pointer-events-none absolute inset-x-0 z-[15] border-t-2 border-red-500"
           style={{ top: nowTop }}
         />
       )}

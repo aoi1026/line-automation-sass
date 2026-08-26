@@ -31,6 +31,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import {
+  OnboardingChecklist,
+  type OnboardingStep,
+} from "./_components/onboarding-checklist";
 
 export default async function DashboardHomePage() {
   const session = await requireSession();
@@ -57,6 +61,10 @@ export default async function DashboardHomePage() {
     customerCount,
     pendingWebCount,
     recentLogs,
+    store,
+    activeServiceCount,
+    activeStaffCount,
+    enabledAutomationCount,
   ] = await Promise.all([
     // 本日の予約（PENDING / CONFIRMED / COMPLETED）
     prisma.reservation.findMany({
@@ -104,7 +112,68 @@ export default async function DashboardHomePage() {
       orderBy: { sentAt: "desc" },
       take: 5,
     }),
+    // セットアップガイドの判定用
+    prisma.store.findUniqueOrThrow({
+      where: { id: storeId },
+      select: { phone: true, address: true, lineChannelAccessToken: true },
+    }),
+    prisma.service.count({ where: { storeId, active: true } }),
+    prisma.staffMember.count({ where: { storeId, active: true } }),
+    prisma.automationSetting.count({ where: { storeId, enabled: true } }),
   ]);
+
+  // 初期セットアップの進捗（すべて完了していれば非表示）
+  const onboardingSteps: OnboardingStep[] = [
+    {
+      key: "store",
+      title: "店舗情報を登録する",
+      description: "電話番号と住所を登録すると、Web予約ページやメッセージに正しく表示されます。",
+      href: "/dashboard/settings",
+      actionLabel: "登録する",
+      done: store.phone.trim() !== "" && store.address.trim() !== "",
+    },
+    {
+      key: "services",
+      title: "メニューを登録する",
+      description: "施術メニューと所要時間・料金を登録すると、Web予約を受け付けられます。",
+      href: "/dashboard/settings?tab=services",
+      actionLabel: "登録する",
+      done: activeServiceCount > 0,
+    },
+    {
+      key: "staff",
+      title: "スタッフを登録する",
+      description: "担当者を登録すると、予約ごとに担当を割り当てられます。",
+      href: "/dashboard/settings?tab=staff",
+      actionLabel: "登録する",
+      done: activeStaffCount > 0,
+    },
+    {
+      key: "line",
+      title: "LINE公式アカウントを接続する",
+      description: "接続すると、メッセージが実際にお客様のLINEへ届くようになります。",
+      href: "/dashboard/settings?tab=line",
+      actionLabel: "接続する",
+      done: store.lineChannelAccessToken.trim() !== "",
+    },
+    {
+      key: "automations",
+      title: "自動配信をオンにする",
+      description: "リマインダーや来店お礼などを、自動でお届けできるようになります。",
+      href: "/dashboard/automations",
+      actionLabel: "設定する",
+      done: enabledAutomationCount > 0,
+    },
+    {
+      key: "customers",
+      title: "お客様を登録する",
+      description: "既存のお客様を登録すると、すぐにメッセージをお届けできます。",
+      href: "/dashboard/customers",
+      actionLabel: "登録する",
+      done: customerCount > 0,
+    },
+  ];
+  const onboardingCompleted = onboardingSteps.every((step) => step.done);
 
   return (
     <>
@@ -114,6 +183,9 @@ export default async function DashboardHomePage() {
       />
 
       <div className="space-y-6">
+        {/* セットアップガイド（すべて完了すると表示されない） */}
+        {!onboardingCompleted && <OnboardingChecklist steps={onboardingSteps} />}
+
         {/* KPI */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard

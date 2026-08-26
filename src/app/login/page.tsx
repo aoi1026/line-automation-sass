@@ -54,7 +54,7 @@ export default async function LoginPage({
 
       <p className="mt-6 text-sm text-gray-600">
         アカウントをお持ちでない方は{" "}
-        <Link href="/signup" className="font-medium text-brand-dark hover:underline">
+        <Link href="/register" className="font-medium text-brand-dark hover:underline">
           新規登録はこちら
         </Link>
       </p>

@@ -51,6 +51,20 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   });
   if (!segment) return notFound("セグメントが見つかりませんでした");
 
-  await prisma.segment.delete({ where: { id: segment.id } });
+  // このセグメントを参照している未配信のキャンペーンは、
+  // segmentId が SetNull されると「全顧客」宛に変わってしまうため、
+  // 削除前に抽出条件を campaign.filters へ退避して配信対象を維持する。
+  // （配信済み・中止のキャンペーンは履歴として保持したいので触らない）
+  await prisma.$transaction(async (tx) => {
+    await tx.campaign.updateMany({
+      where: {
+        segmentId: segment.id,
+        storeId: session.storeId,
+        status: { in: ["DRAFT", "SCHEDULED"] },
+      },
+      data: { filters: segment.rules ?? {} },
+    });
+    await tx.segment.delete({ where: { id: segment.id } });
+  });
   return NextResponse.json({ ok: true });
 }

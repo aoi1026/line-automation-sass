@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getApiSession, jsonError, parseBody, unauthorized } from "@/lib/api";
 import { addDays, addMinutes, fromJst } from "@/lib/jst";
 import { notifyReservationEvent } from "@/lib/messaging";
+import { conflictMessage, findReservationConflict } from "@/lib/availability";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
