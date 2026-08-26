@@ -2,15 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-export const PERIOD_DAYS = [30, 90, 365] as const;
-export type PeriodDays = (typeof PERIOD_DAYS)[number];
-
-export const PERIOD_LABELS: Record<PeriodDays, string> = {
-  30: "直近30日",
-  90: "直近90日",
-  365: "直近1年",
-};
+import { PERIOD_DAYS, PERIOD_LABELS, type PeriodDays } from "./period";
 
 /** 期間切替タブ（?days= で切り替え） */
 export function PeriodTabs({ days }: { days: PeriodDays }) {
