@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { formatJstDateShort } from "@/lib/jst";
 import { countTargets, describeRules, parseRules } from "@/lib/segments";
 import { requireSession } from "@/lib/session";
 import { SegmentsClient, type SegmentItem } from "./_components/segments-client";
+
+export const metadata: Metadata = { title: "セグメント" };
 
 export default async function SegmentsPage() {
   const session = await requireSession();

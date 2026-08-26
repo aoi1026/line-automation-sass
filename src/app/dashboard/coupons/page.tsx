@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Percent, Plus, Send, Ticket, TicketCheck } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
@@ -9,6 +10,8 @@ import { StatCard } from "@/components/ui/stat-card";
 import { formatDiscount, formatValidity } from "@/app/c/[token]/coupon-card";
 import { CouponFormDialog } from "./_components/coupon-form-dialog";
 import { CouponsTable, type CouponRow } from "./_components/coupons-table";
+
+export const metadata: Metadata = { title: "クーポン" };
 
 function monthStartJst(year: number, month: number) {
   return fromJst(`${year}-${String(month).padStart(2, "0")}-01`);

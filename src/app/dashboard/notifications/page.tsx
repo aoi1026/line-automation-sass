@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -14,6 +15,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import type { NotificationItem } from "@/components/shell/notification-bell";
 import { MarkAllReadButton } from "./_components/mark-all-read-button";
 import { NotificationList } from "./_components/notification-list";
+
+export const metadata: Metadata = { title: "通知センター" };
 
 const PAGE_SIZE = 30;
 

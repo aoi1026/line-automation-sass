@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { MessageCircle, Plus, Sparkles, Users } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -11,6 +12,8 @@ import { StatCard } from "@/components/ui/stat-card";
 import { CustomerFormDialog } from "./_components/customer-form-dialog";
 import { CustomersTable, type CustomerRow } from "./_components/customers-table";
 import { CustomersToolbar } from "./_components/customers-toolbar";
+
+export const metadata: Metadata = { title: "顧客管理" };
 
 export default async function CustomersPage({
   searchParams,

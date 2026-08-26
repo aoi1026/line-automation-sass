@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { jsonError, notFound, parseBody } from "@/lib/api";
 import { notify } from "@/lib/notifications";
 import { parseSurveyQuestions } from "@/app/api/surveys/schema";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 const FALLBACK_THANKS = "ご回答ありがとうございました。";
 
@@ -21,6 +22,15 @@ const submitSchema = z.object({
  * SurveyRequest のトークンで厳密にスコープする。
  */
 export async function POST(req: Request, ctx: { params: Promise<{ token: string }> }) {
+  const ip = getClientIp(req);
+  const rl = rateLimit(`survey:${ip}`, 30, 60 * 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "試行回数が多すぎます。しばらく時間をおいてお試しください。" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   const { token } = await ctx.params;
 
   const { data, error } = await parseBody(req, submitSchema);

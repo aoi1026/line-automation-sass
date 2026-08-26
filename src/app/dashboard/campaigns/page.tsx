@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarClock, Megaphone, Plus, Send } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -10,6 +11,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { CampaignsTable, type CampaignRow } from "./_components/campaigns-table";
+
+export const metadata: Metadata = { title: "キャンペーン" };
 
 export default async function CampaignsPage() {
   const session = await requireSession();

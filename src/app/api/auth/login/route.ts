@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth";
 import { jsonError, parseBody } from "@/lib/api";
 import { createSessionCookie } from "@/lib/session";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
   email: z
@@ -17,6 +18,15 @@ const loginSchema = z.object({
 const INVALID_CREDENTIALS = "メールアドレスまたはパスワードが正しくありません";
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+  const rl = rateLimit(`login:${ip}`, 10, 10 * 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "試行回数が多すぎます。しばらく時間をおいてお試しください。" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   const { data, error } = await parseBody(req, loginSchema);
   if (error) return error;
 

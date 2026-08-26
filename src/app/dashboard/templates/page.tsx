@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { FileText } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
@@ -7,6 +8,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { CreateTemplateButton } from "./_components/create-template-button";
 import { TemplateCard } from "./_components/template-card";
+
+export const metadata: Metadata = { title: "テンプレート" };
 
 export default async function TemplatesPage() {
   const session = await requireSession();

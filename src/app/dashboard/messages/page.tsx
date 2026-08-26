@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { MessageSquareText, Send, SendHorizonal, TriangleAlert } from "lucide-react";
 import type { MessageChannel, MessageKind, MessageStatus, Prisma } from "@prisma/client";
@@ -24,6 +25,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { MessageFilters } from "./_components/message-filters";
 import { MessagesTable, type MessageRow } from "./_components/messages-table";
+
+export const metadata: Metadata = { title: "メッセージ履歴" };
 
 const PAGE_SIZE = 30;
 

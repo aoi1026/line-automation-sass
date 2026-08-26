@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Info, Zap } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
@@ -7,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { AutomationCard, type AutomationSettingState } from "./_components/automation-card";
 import { RunNowButton } from "./_components/run-now-button";
+
+export const metadata: Metadata = { title: "自動配信設定" };
 
 function intervalLabel(): string {
   const raw = Number(process.env.AUTOMATION_INTERVAL_MS ?? "60000");

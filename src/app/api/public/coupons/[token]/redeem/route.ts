@@ -1,12 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError, notFound } from "@/lib/api";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 /**
  * クーポンの店頭消込（公開ページ用・認証不要）。
  * トークンでスコープし、来店客のブラウザから店頭スタッフが操作する想定。
  */
-export async function POST(_req: Request, ctx: { params: Promise<{ token: string }> }) {
+export async function POST(req: Request, ctx: { params: Promise<{ token: string }> }) {
+  const ip = getClientIp(req);
+  const rl = rateLimit(`coupon:${ip}`, 30, 60 * 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "試行回数が多すぎます。しばらく時間をおいてお試しください。" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   const { token } = await ctx.params;
 
   const issue = await prisma.couponIssue.findUnique({

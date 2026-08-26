@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ClipboardList, MessageSquare, Plus, Star } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -10,6 +11,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { SurveysTable, type SurveyRow } from "./_components/surveys-table";
+
+export const metadata: Metadata = { title: "アンケート" };
 
 export default async function SurveysPage() {
   const session = await requireSession();

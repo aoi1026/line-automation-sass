@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { MessageKind } from "@prisma/client";
 import {
   BarChart3,
@@ -51,6 +52,8 @@ import { StaffPerformanceTable } from "./_components/staff-performance-table";
 import { StaffRevenueChart } from "./_components/staff-revenue-chart";
 import { VisitsChart, type VisitsChartPoint } from "./_components/visits-chart";
 import { VisitsTrendChart } from "./_components/visits-trend-chart";
+
+export const metadata: Metadata = { title: "分析レポート" };
 
 export default async function AnalyticsPage({
   searchParams,

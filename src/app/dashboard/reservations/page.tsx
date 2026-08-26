@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { Prisma, ReservationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
@@ -21,6 +22,8 @@ import {
   type StatusFilter,
   type WeekDay,
 } from "./_components/types";
+
+export const metadata: Metadata = { title: "予約管理" };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

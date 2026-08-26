@@ -1,4 +1,8 @@
-import { SignJWT, jwtVerify } from "jose";
+// jose のルート import は JWE 復号（CompressionStream 依存）まで取り込んでしまい、
+// middleware が動く Edge Runtime で警告になる。使うのは HS256 の JWS のみなので
+// サブパスから直接読み込んで不要なコードをバンドルしない。
+import { SignJWT } from "jose/jwt/sign";
+import { jwtVerify } from "jose/jwt/verify";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 

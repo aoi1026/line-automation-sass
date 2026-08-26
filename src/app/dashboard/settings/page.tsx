@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
@@ -10,6 +11,8 @@ import {
   SettingsTabs,
   type SettingsTabValue,
 } from "./_components/settings-tabs";
+
+export const metadata: Metadata = { title: "設定" };
 
 const TAB_VALUES: SettingsTabValue[] = ["store", "hours", "services", "staff", "line"];
 

@@ -9,6 +9,7 @@ import { Prisma, type Store } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getLineProfile, replyText, verifyLineSignature } from "@/lib/line/client";
 import { getAppUrl } from "@/lib/utils";
+import { rateLimit } from "@/lib/rate-limit";
 
 /** Web予約ページのURL */
 function bookingUrl(store: Pick<Store, "slug">): string {
@@ -144,6 +145,17 @@ async function handleMessage(store: Store, event: MessageEvent): Promise<void> {
  */
 export async function POST(req: Request, ctx: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await ctx.params;
+
+  // 大量リクエストによる過負荷を防ぐ。LINE側の再送を招かないよう、制限中も200を返す
+  const rl = rateLimit(`line-webhook:${storeId}`, 600, 60_000);
+  if (!rl.ok) {
+    console.warn(`[line-webhook] レート制限のためイベントを無視しました: store=${storeId}`);
+    return NextResponse.json({
+      ok: true,
+      ignored: true,
+      message: "リクエストが多すぎるため、このイベントは処理されませんでした",
+    });
+  }
 
   const store = await prisma.store.findUnique({ where: { id: storeId } });
   if (!store) {

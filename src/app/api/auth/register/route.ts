@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import { jsonError, parseBody } from "@/lib/api";
 import { createSessionCookie } from "@/lib/session";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { generateSlug } from "@/lib/utils";
 import { DEFAULT_BUSINESS_HOURS, DEFAULT_TEMPLATES } from "@/lib/constants";
 
@@ -23,6 +24,15 @@ const registerSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+  const rl = rateLimit(`register:${ip}`, 5, 60 * 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "試行回数が多すぎます。しばらく時間をおいてお試しください。" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   const { data, error } = await parseBody(req, registerSchema);
   if (error) return error;
 

@@ -5,6 +5,7 @@ import { jsonError, notFound, parseBody } from "@/lib/api";
 import { formatJstDateTime } from "@/lib/jst";
 import { notifyReservationEvent } from "@/lib/messaging";
 import { notify } from "@/lib/notifications";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,15 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  const ip = getClientIp(req);
+  const rl = rateLimit(`cancel:${ip}`, 20, 60 * 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "試行回数が多すぎます。しばらく時間をおいてお試しください。" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   const { token } = await params;
   const { data, error } = await parseBody(req, bodySchema);
   if (error) return error;
