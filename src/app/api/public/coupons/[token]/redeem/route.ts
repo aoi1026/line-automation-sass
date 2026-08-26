@@ -18,6 +18,9 @@ export async function POST(_req: Request, ctx: { params: Promise<{ token: string
   if (issue.usedAt) return jsonError("既に使用済みです");
 
   const now = new Date();
+  if (issue.coupon.validFrom && issue.coupon.validFrom > now) {
+    return jsonError("このクーポンはまだご利用いただけません");
+  }
   if (issue.coupon.validUntil && issue.coupon.validUntil < now) {
     return jsonError("このクーポンは有効期限が切れています");
   }

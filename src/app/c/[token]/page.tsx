@@ -49,7 +49,8 @@ export default async function PublicCouponPage({
   const { coupon, customer } = issue;
   const now = new Date();
   const expired = Boolean(coupon.validUntil && coupon.validUntil < now);
-  const redeemable = coupon.active && !issue.usedAt && !expired;
+  const notYetValid = Boolean(coupon.validFrom && coupon.validFrom > now);
+  const redeemable = coupon.active && !issue.usedAt && !expired && !notYetValid;
 
   return (
     <div className="min-h-screen bg-gray-50">
