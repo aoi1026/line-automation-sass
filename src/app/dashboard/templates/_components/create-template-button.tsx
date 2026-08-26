@@ -14,7 +14,11 @@ export function CreateTemplateButton({ storeName }: { storeName: string }) {
         <Plus aria-hidden="true" />
         テンプレートを作成
       </Button>
-      <TemplateFormDialog open={open} onOpenChange={setOpen} storeName={storeName} />
+      <TemplateFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        storeName={storeName}
+      />
     </>
   );
 }

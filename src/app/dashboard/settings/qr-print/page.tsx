@@ -51,7 +51,9 @@ export default async function QrPrintPage() {
 
       <div className="qr-print-hide mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">予約QRコードの掲示物</h1>
+          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">
+            予約QRコードの掲示物
+          </h1>
           <p className="mt-1 text-sm text-gray-500">
             A4サイズ縦向きで印刷できます。店頭やレジ横への掲示にご利用ください。
           </p>
@@ -61,7 +63,7 @@ export default async function QrPrintPage() {
             href="/dashboard/settings?tab=store"
             className={buttonVariants({ variant: "outline" })}
           >
-            <ArrowLeft />
+            <ArrowLeft aria-hidden="true" />
             設定に戻る
           </Link>
           <PrintButton />
@@ -70,7 +72,7 @@ export default async function QrPrintPage() {
 
       <div
         id="qr-print-sheet"
-        className="mx-auto flex w-full max-w-[210mm] flex-col items-center gap-8 rounded-xl border border-gray-200 bg-white px-8 py-14 text-center shadow-sm sm:px-12"
+        className="mx-auto flex w-full max-w-[210mm] flex-col items-center gap-8 rounded-xl border border-gray-200 bg-white px-5 py-12 text-center shadow-sm sm:px-12 sm:py-14"
       >
         <p className="text-lg font-medium text-gray-500">{store.name}</p>
         <div className="flex flex-col gap-3">
@@ -87,11 +89,13 @@ export default async function QrPrintPage() {
           alt="Web予約ページのQRコード"
           width={320}
           height={320}
-          className="h-[320px] w-[320px]"
+          className="h-auto w-full max-w-[320px]"
         />
         <div className="flex flex-col gap-1">
           <p className="text-sm text-gray-500">Web予約ページ</p>
-          <p className="break-all font-mono text-sm text-gray-700">{reserveUrl}</p>
+          <p className="break-all font-mono text-sm text-gray-700">
+            {reserveUrl}
+          </p>
         </div>
         <p className="text-sm text-gray-500">
           24時間いつでもご予約いただけます。ご来店を心よりお待ちしております。

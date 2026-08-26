@@ -36,7 +36,7 @@ export function RunNowButton() {
         failed += counts.failed;
       }
       toast.success(
-        `自動配信を実行しました（送信${sent}件・スキップ${skipped}件${failed > 0 ? `・失敗${failed}件` : ""}）`
+        `自動配信を実行しました（送信${sent}件・スキップ${skipped}件${failed > 0 ? `・失敗${failed}件` : ""}）`,
       );
       router.refresh();
     } finally {

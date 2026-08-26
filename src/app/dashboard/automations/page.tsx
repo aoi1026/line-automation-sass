@@ -6,7 +6,10 @@ import { isLineConfigured } from "@/lib/line/client";
 import { AUTOMATION_KINDS } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { AutomationCard, type AutomationSettingState } from "./_components/automation-card";
+import {
+  AutomationCard,
+  type AutomationSettingState,
+} from "./_components/automation-card";
 import { RunNowButton } from "./_components/run-now-button";
 
 export const metadata: Metadata = { title: "自動配信設定" };
@@ -28,7 +31,11 @@ export default async function AutomationsPage() {
     }),
     prisma.automationSetting.findMany({ where: { storeId: session.storeId } }),
     prisma.messageTemplate.findMany({
-      where: { storeId: session.storeId, enabled: true, kind: { in: AUTOMATION_KINDS } },
+      where: {
+        storeId: session.storeId,
+        enabled: true,
+        kind: { in: AUTOMATION_KINDS },
+      },
       orderBy: { createdAt: "asc" },
       select: { id: true, kind: true, name: true },
     }),
@@ -62,8 +69,8 @@ export default async function AutomationsPage() {
         >
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
-            デモモード中はメッセージがお客様に届かず、履歴への記録のみ行われます。「設定 →
-            LINE連携」でチャネルを設定すると実際に送信されます。
+            デモモード中はメッセージがお客様に届かず、履歴への記録のみ行われます。「設定
+            → LINE連携」でチャネルを設定すると実際に送信されます。
           </span>
         </div>
       )}
@@ -74,9 +81,12 @@ export default async function AutomationsPage() {
             <Zap className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-900">自動配信のしくみ</p>
+            <p className="text-sm font-medium text-gray-900">
+              自動配信のしくみ
+            </p>
             <p className="mt-1 text-sm leading-relaxed text-gray-500">
-              自動配信は約{intervalLabel()}ごとにバックグラウンドで自動実行されています。送信済みの判定はメッセージ履歴に基づいて行われるため、何度実行されても同じメッセージが重複して送信されることはありません。
+              自動配信は約{intervalLabel()}
+              ごとにバックグラウンドで自動実行されています。送信済みの判定はメッセージ履歴に基づいて行われるため、何度実行されても同じメッセージが重複して送信されることはありません。
             </p>
           </div>
         </CardContent>

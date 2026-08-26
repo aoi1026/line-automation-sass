@@ -11,13 +11,8 @@ import {
   parseSurveyQuestions,
 } from "@/app/api/surveys/schema";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -62,7 +57,11 @@ function BreakdownBar({
       </div>
       <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-gray-100">
         <div
-          className={tone === "amber" ? "h-full rounded-full bg-amber-400" : "h-full rounded-full bg-brand"}
+          className={
+            tone === "amber"
+              ? "h-full rounded-full bg-amber-400"
+              : "h-full rounded-full bg-brand"
+          }
           style={{ width: `${Math.round(ratio * 1000) / 10}%` }}
         />
       </div>
@@ -118,13 +117,18 @@ export default async function SurveyResultsPage({
     <>
       <PageHeader
         title={survey.title}
-        description={survey.description !== "" ? survey.description : "アンケートの回答集計を表示します。"}
+        description={
+          survey.description !== ""
+            ? survey.description
+            : "アンケートの回答集計を表示します。"
+        }
         actions={
-          <Link href={`/dashboard/surveys/${survey.id}/edit`}>
-            <Button variant="outline">
-              <Pencil />
-              編集
-            </Button>
+          <Link
+            href={`/dashboard/surveys/${survey.id}/edit`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <Pencil aria-hidden="true" />
+            編集
           </Link>
         }
       />
@@ -133,7 +137,7 @@ export default async function SurveyResultsPage({
         <StatCard
           label="回答数"
           value={formatNumber(parsed.length)}
-          icon={<MessageSquare />}
+          icon={<MessageSquare aria-hidden="true" />}
         />
         <StatCard
           label="平均評価"
@@ -142,26 +146,42 @@ export default async function SurveyResultsPage({
               "-"
             ) : (
               <span className="inline-flex items-center gap-1.5">
-                <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+                <Star
+                  className="h-5 w-5 fill-amber-400 text-amber-400"
+                  aria-hidden="true"
+                />
                 {avgRating.toFixed(1)}
               </span>
             )
           }
           sub={firstRating ? excerpt(firstRating.label, 20) : "評価質問なし"}
-          icon={<Star />}
+          icon={<Star aria-hidden="true" />}
         />
         <StatCard
           label="回答率"
-          value={requestCount === 0 ? "-" : formatPercent(parsed.length / requestCount)}
+          value={
+            requestCount === 0
+              ? "-"
+              : formatPercent(parsed.length / requestCount)
+          }
           sub={`回答 ${formatNumber(parsed.length)} / 依頼 ${formatNumber(requestCount)}`}
-          icon={<Percent />}
+          icon={<Percent aria-hidden="true" />}
         />
       </div>
 
       {questions.length === 0 ? (
         <EmptyState
           title="質問が設定されていません"
-          description="「編集」から質問を追加してください。"
+          description="このアンケートには質問がありません。右上の「編集」から質問を追加すると、お客様が回答できるようになります。"
+          action={
+            <Link
+              href={`/dashboard/surveys/${survey.id}/edit`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <Pencil aria-hidden="true" />
+              質問を追加
+            </Link>
+          }
         />
       ) : (
         <div className="flex flex-col gap-4">
@@ -179,8 +199,12 @@ export default async function SurveyResultsPage({
                     <span>
                       Q{index + 1}. {question.label}
                     </span>
-                    <Badge variant="secondary">{QUESTION_TYPE_LABELS[question.type]}</Badge>
-                    {question.required && <Badge variant="destructive">必須</Badge>}
+                    <Badge variant="secondary">
+                      {QUESTION_TYPE_LABELS[question.type]}
+                    </Badge>
+                    {question.required && (
+                      <Badge variant="destructive">必須</Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -188,15 +212,26 @@ export default async function SurveyResultsPage({
                     (() => {
                       const values = rawAnswers
                         .map((a) => a.value)
-                        .filter((v): v is number => typeof v === "number" && v >= 1 && v <= 5);
+                        .filter(
+                          (v): v is number =>
+                            typeof v === "number" && v >= 1 && v <= 5,
+                        );
                       if (values.length === 0) {
-                        return <p className="text-sm text-gray-400">まだ回答がありません。</p>;
+                        return (
+                          <p className="text-sm text-gray-400">
+                            まだ回答がありません。
+                          </p>
+                        );
                       }
-                      const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
+                      const avg =
+                        values.reduce((sum, v) => sum + v, 0) / values.length;
                       return (
                         <div>
                           <div className="mb-4 flex items-baseline gap-2">
-                            <RatingValue value={avg} className="text-xl font-bold" />
+                            <RatingValue
+                              value={avg}
+                              className="text-xl font-bold"
+                            />
                             <span className="text-xs text-gray-500">
                               {formatNumber(values.length)}件の回答
                             </span>
@@ -216,9 +251,16 @@ export default async function SurveyResultsPage({
                       const options = question.options ?? [];
                       const values = rawAnswers
                         .map((a) => a.value)
-                        .filter((v): v is string => typeof v === "string" && options.includes(v));
+                        .filter(
+                          (v): v is string =>
+                            typeof v === "string" && options.includes(v),
+                        );
                       if (values.length === 0) {
-                        return <p className="text-sm text-gray-400">まだ回答がありません。</p>;
+                        return (
+                          <p className="text-sm text-gray-400">
+                            まだ回答がありません。
+                          </p>
+                        );
                       }
                       return (
                         <div className="flex flex-col gap-3">
@@ -240,11 +282,16 @@ export default async function SurveyResultsPage({
                       const entries = rawAnswers
                         .filter(
                           (a): a is typeof a & { value: string } =>
-                            typeof a.value === "string" && a.value.trim() !== ""
+                            typeof a.value === "string" &&
+                            a.value.trim() !== "",
                         )
                         .slice(0, 20);
                       if (entries.length === 0) {
-                        return <p className="text-sm text-gray-400">まだ回答がありません。</p>;
+                        return (
+                          <p className="text-sm text-gray-400">
+                            まだ回答がありません。
+                          </p>
+                        );
                       }
                       return (
                         <ul className="flex flex-col gap-3">
@@ -277,7 +324,7 @@ export default async function SurveyResultsPage({
           {parsed.length === 0 ? (
             <div className="px-5 pb-5">
               <EmptyState
-                icon={<MessageSquare />}
+                icon={<MessageSquare aria-hidden="true" />}
                 title="回答がまだありません"
                 description="来店お礼メッセージなどでアンケートを送ると、回答がここに表示されます。"
               />

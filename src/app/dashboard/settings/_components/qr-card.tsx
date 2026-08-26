@@ -1,6 +1,12 @@
 import { Download, Printer } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 /** Web予約ページのQRコードを表示するカード */
 export function QrCard() {
@@ -8,7 +14,9 @@ export function QrCard() {
     <Card>
       <CardHeader>
         <CardTitle>予約QRコード</CardTitle>
-        <CardDescription>Web予約ページを開くためのQRコードです。</CardDescription>
+        <CardDescription>
+          Web予約ページを開くためのQRコードです。
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">

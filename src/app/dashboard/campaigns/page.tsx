@@ -10,7 +10,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
-import { CampaignsTable, type CampaignRow } from "./_components/campaigns-table";
+import {
+  CampaignsTable,
+  type CampaignRow,
+} from "./_components/campaigns-table";
 
 export const metadata: Metadata = { title: "キャンペーン" };
 
@@ -29,7 +32,9 @@ export default async function CampaignsPage() {
         orderBy: { createdAt: "desc" },
       }),
       prisma.tag.findMany({ where: { storeId: session.storeId } }),
-      prisma.campaign.count({ where: { storeId: session.storeId, status: "SENT" } }),
+      prisma.campaign.count({
+        where: { storeId: session.storeId, status: "SENT" },
+      }),
       prisma.messageLog.count({
         where: {
           storeId: session.storeId,
@@ -38,7 +43,9 @@ export default async function CampaignsPage() {
           sentAt: { gte: monthStart },
         },
       }),
-      prisma.campaign.count({ where: { storeId: session.storeId, status: "SCHEDULED" } }),
+      prisma.campaign.count({
+        where: { storeId: session.storeId, status: "SCHEDULED" },
+      }),
     ]);
 
   const tagNameById = new Map(tags.map((t) => [t.id, t.name]));
@@ -80,7 +87,7 @@ export default async function CampaignsPage() {
         description="セグメントで対象を絞り込み、お客様のLINEへメッセージを一斉配信できます。"
         actions={
           <Link href="/dashboard/campaigns/new" className={buttonVariants()}>
-            <Plus />
+            <Plus aria-hidden="true" />
             キャンペーンを作成
           </Link>
         }
@@ -90,30 +97,33 @@ export default async function CampaignsPage() {
         <StatCard
           label="配信済みキャンペーン"
           value={formatNumber(sentCampaignCount)}
-          icon={<Megaphone />}
+          icon={<Megaphone aria-hidden="true" />}
         />
         <StatCard
           label="今月の配信数"
           value={formatNumber(monthlySendCount)}
           sub="キャンペーンで送信したメッセージ数"
-          icon={<Send />}
+          icon={<Send aria-hidden="true" />}
         />
         <StatCard
           label="配信予約中"
           value={formatNumber(scheduledCount)}
-          icon={<CalendarClock />}
+          icon={<CalendarClock aria-hidden="true" />}
         />
       </div>
 
       <div className="mt-6">
         {rows.length === 0 ? (
           <EmptyState
-            icon={<Megaphone />}
+            icon={<Megaphone aria-hidden="true" />}
             title="キャンペーンがまだありません"
-            description="「キャンペーンを作成」から、お客様への一斉配信メッセージを作成できます。"
+            description="お客様のLINEへ一斉配信するメッセージを作成できます。まずは下書きとして保存し、内容を確認してから配信することもできます。"
             action={
-              <Link href="/dashboard/campaigns/new" className={buttonVariants()}>
-                <Plus />
+              <Link
+                href="/dashboard/campaigns/new"
+                className={buttonVariants()}
+              >
+                <Plus aria-hidden="true" />
                 キャンペーンを作成
               </Link>
             }

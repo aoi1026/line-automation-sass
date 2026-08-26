@@ -89,7 +89,9 @@ export function AutomationCard({
   const router = useRouter();
   const Icon = KIND_ICONS[kind] ?? Bell;
   const [state, setState] = React.useState<AutomationSettingState>(setting);
-  const [offsetText, setOffsetText] = React.useState(String(setting.offsetValue));
+  const [offsetText, setOffsetText] = React.useState(
+    String(setting.offsetValue),
+  );
   const [saving, setSaving] = React.useState(false);
 
   const kindLabel = MESSAGE_KIND_LABELS[kind];
@@ -110,7 +112,9 @@ export function AutomationCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       if (!res.ok) {
         toast.error(data?.error ?? "保存に失敗しました");
         router.refresh();
@@ -158,13 +162,19 @@ export function AutomationCard({
           disabled={saving}
           onCheckedChange={(checked) => {
             setState((s) => ({ ...s, enabled: checked }));
-            void patch({ enabled: checked }, checked ? "有効にしました" : "無効にしました");
+            void patch(
+              { enabled: checked },
+              checked ? "有効にしました" : "無効にしました",
+            );
           }}
           aria-label={`${kindLabel}の自動配信を有効にする`}
         />
       </div>
 
-      <div className="border-t border-gray-100 p-5" aria-busy={saving || undefined}>
+      <div
+        className="border-t border-gray-100 p-5"
+        aria-busy={saving || undefined}
+      >
         {locked && (
           <p className="mb-4 rounded-lg bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-gray-500">
             現在オフのため、下の設定は変更できません。右上のスイッチをオンにすると編集できます。
@@ -172,7 +182,10 @@ export function AutomationCard({
         )}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor={`template-${kind}`} className={locked ? "text-gray-400" : undefined}>
+            <Label
+              htmlFor={`template-${kind}`}
+              className={locked ? "text-gray-400" : undefined}
+            >
               使用テンプレート
             </Label>
             <Select
@@ -193,9 +206,12 @@ export function AutomationCard({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">標準文面</SelectItem>
-                {state.templateId && !templates.some((t) => t.id === state.templateId) && (
-                  <SelectItem value={state.templateId}>（無効化されたテンプレート）</SelectItem>
-                )}
+                {state.templateId &&
+                  !templates.some((t) => t.id === state.templateId) && (
+                    <SelectItem value={state.templateId}>
+                      （無効化されたテンプレート）
+                    </SelectItem>
+                  )}
                 {templates.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.name}
@@ -203,18 +219,26 @@ export function AutomationCard({
                 ))}
               </SelectContent>
             </Select>
-            <p id={`template-${kind}-help`} className="mt-1.5 text-xs text-gray-500">
+            <p
+              id={`template-${kind}-help`}
+              className="mt-1.5 text-xs text-gray-500"
+            >
               「テンプレート」ページで作成した文面を選べます。
             </p>
           </div>
 
           {KINDS_WITH_OFFSET.includes(kind) && (
             <div>
-              <Label htmlFor={`offset-${kind}`} className={locked ? "text-gray-400" : undefined}>
+              <Label
+                htmlFor={`offset-${kind}`}
+                className={locked ? "text-gray-400" : undefined}
+              >
                 送信タイミング
               </Label>
               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-gray-700">
-                <span className="shrink-0">{kind === "REMINDER" ? "予約の" : "来店の"}</span>
+                <span className="shrink-0">
+                  {kind === "REMINDER" ? "予約の" : "来店の"}
+                </span>
                 <Input
                   id={`offset-${kind}`}
                   type="number"
@@ -248,9 +272,14 @@ export function AutomationCard({
                     <SelectItem value="days">日</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="shrink-0">{kind === "REMINDER" ? "前に送信" : "後に送信"}</span>
+                <span className="shrink-0">
+                  {kind === "REMINDER" ? "前に送信" : "後に送信"}
+                </span>
               </div>
-              <p id={`offset-${kind}-help`} className="mt-1.5 text-xs text-gray-500">
+              <p
+                id={`offset-${kind}-help`}
+                className="mt-1.5 text-xs text-gray-500"
+              >
                 1〜60の範囲でご指定ください。
               </p>
             </div>
@@ -258,7 +287,10 @@ export function AutomationCard({
 
           {KINDS_WITH_SEND_HOUR.includes(kind) && (
             <div>
-              <Label htmlFor={`send-hour-${kind}`} className={locked ? "text-gray-400" : undefined}>
+              <Label
+                htmlFor={`send-hour-${kind}`}
+                className={locked ? "text-gray-400" : undefined}
+              >
                 送信時刻
               </Label>
               <div className="mt-1.5 flex items-center gap-2 text-sm text-gray-700">
@@ -289,7 +321,10 @@ export function AutomationCard({
                 </Select>
                 <span className="shrink-0">以降に送信</span>
               </div>
-              <p id={`send-hour-${kind}-help`} className="mt-1.5 text-xs text-gray-500">
+              <p
+                id={`send-hour-${kind}-help`}
+                className="mt-1.5 text-xs text-gray-500"
+              >
                 早朝・深夜の通知を避けるための下限時刻です（日本時間）。
               </p>
             </div>
@@ -297,7 +332,10 @@ export function AutomationCard({
 
           {KINDS_WITH_COUPON.includes(kind) && (
             <div>
-              <Label htmlFor={`coupon-${kind}`} className={locked ? "text-gray-400" : undefined}>
+              <Label
+                htmlFor={`coupon-${kind}`}
+                className={locked ? "text-gray-400" : undefined}
+              >
                 クーポン添付
               </Label>
               <Select
@@ -326,15 +364,22 @@ export function AutomationCard({
                   ))}
                 </SelectContent>
               </Select>
-              <p id={`coupon-${kind}-help`} className="mt-1.5 text-xs text-gray-500">
-                発行されたクーポンのURLが {"{クーポンリンク}"} に差し込まれます。
+              <p
+                id={`coupon-${kind}-help`}
+                className="mt-1.5 text-xs text-gray-500"
+              >
+                発行されたクーポンのURLが {"{クーポンリンク}"}{" "}
+                に差し込まれます。
               </p>
             </div>
           )}
 
           {KINDS_WITH_SURVEY.includes(kind) && (
             <div>
-              <Label htmlFor={`survey-${kind}`} className={locked ? "text-gray-400" : undefined}>
+              <Label
+                htmlFor={`survey-${kind}`}
+                className={locked ? "text-gray-400" : undefined}
+              >
                 アンケート添付
               </Label>
               <Select
@@ -363,7 +408,10 @@ export function AutomationCard({
                   ))}
                 </SelectContent>
               </Select>
-              <p id={`survey-${kind}-help`} className="mt-1.5 text-xs text-gray-500">
+              <p
+                id={`survey-${kind}-help`}
+                className="mt-1.5 text-xs text-gray-500"
+              >
                 回答ページのURLが {"{アンケートリンク}"} に差し込まれます。
               </p>
             </div>
@@ -372,7 +420,9 @@ export function AutomationCard({
 
         {kind === "REBOOKING" && (
           <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-gray-500">
-            メニューごとの推奨間隔は「設定 → メニュー」で変更できます。未設定のメニューは店舗の標準間隔（「設定 → 店舗情報」）が使われます。
+            メニューごとの推奨間隔は「設定 →
+            メニュー」で変更できます。未設定のメニューは店舗の標準間隔（「設定 →
+            店舗情報」）が使われます。
           </p>
         )}
       </div>

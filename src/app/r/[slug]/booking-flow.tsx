@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Clock,
   Info,
+  Phone,
   Scissors,
   User,
   Users,
@@ -167,12 +168,15 @@ function RequiredMark() {
 export function BookingFlow({
   slug,
   storeName,
+  storePhone,
   services,
   staff,
   dates,
 }: {
   slug: string;
   storeName: string;
+  /** 空状態で電話導線を出すための店舗電話番号（任意） */
+  storePhone?: string;
   services: PublicService[];
   staff: PublicStaff[];
   dates: DateOption[];
@@ -392,6 +396,17 @@ export function BookingFlow({
               icon={<Scissors aria-hidden="true" />}
               title="ご予約いただけるメニューがありません"
               description="ただいまネット予約の準備中です。恐れ入りますが、店舗まで直接お問い合わせください。"
+              action={
+                storePhone ? (
+                  <a
+                    href={`tel:${storePhone.replace(/[^0-9+]/g, "")}`}
+                    className={cn(buttonVariants(), "h-11")}
+                  >
+                    <Phone aria-hidden="true" />
+                    店舗へ電話する
+                  </a>
+                ) : undefined
+              }
             />
           ) : (
             <ul className="flex flex-col gap-3">

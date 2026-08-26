@@ -93,7 +93,9 @@ export function RuleBuilder({
     <div className="space-y-5">
       {/* 最終来店 */}
       <fieldset className="space-y-1.5">
-        <legend className="text-sm font-medium text-gray-700">最終来店からの日数</legend>
+        <legend className="text-sm font-medium text-gray-700">
+          最終来店からの日数
+        </legend>
         <p id={`${idPrefix}-last-visit-help`} className="text-xs text-gray-500">
           最後にご来店いただいた日から今日までの日数で絞り込みます。「60日以上前」はしばらくご来店のないお客様、「30日以内」は最近ご来店のお客様です。
         </p>
@@ -111,7 +113,10 @@ export function RuleBuilder({
               aria-label="最終来店から何日以上前か"
               aria-describedby={`${idPrefix}-last-visit-help`}
             />
-            <Label htmlFor={`${idPrefix}-last-visit-min`} className="font-normal text-gray-600">
+            <Label
+              htmlFor={`${idPrefix}-last-visit-min`}
+              className="font-normal text-gray-600"
+            >
               日以上前
             </Label>
           </div>
@@ -128,7 +133,10 @@ export function RuleBuilder({
               aria-label="最終来店から何日以内か"
               aria-describedby={`${idPrefix}-last-visit-help`}
             />
-            <Label htmlFor={`${idPrefix}-last-visit-max`} className="font-normal text-gray-600">
+            <Label
+              htmlFor={`${idPrefix}-last-visit-max`}
+              className="font-normal text-gray-600"
+            >
               日以内
             </Label>
           </div>
@@ -139,7 +147,10 @@ export function RuleBuilder({
       {/* 来店回数 */}
       <fieldset className="space-y-1.5">
         <legend className="text-sm font-medium text-gray-700">来店回数</legend>
-        <p id={`${idPrefix}-visit-count-help`} className="text-xs text-gray-500">
+        <p
+          id={`${idPrefix}-visit-count-help`}
+          className="text-xs text-gray-500"
+        >
           これまでにご来店いただいた回数の範囲です。「1回以上〜1回以下」で新規のお客様だけを抽出できます。
         </p>
         <div className="flex flex-wrap items-center gap-2 pt-0.5">
@@ -155,7 +166,10 @@ export function RuleBuilder({
             aria-label="来店回数の下限"
             aria-describedby={`${idPrefix}-visit-count-help`}
           />
-          <Label htmlFor={`${idPrefix}-visit-count-min`} className="font-normal text-gray-600">
+          <Label
+            htmlFor={`${idPrefix}-visit-count-min`}
+            className="font-normal text-gray-600"
+          >
             回以上
           </Label>
           <span className="text-gray-300" aria-hidden="true">
@@ -173,7 +187,10 @@ export function RuleBuilder({
             aria-label="来店回数の上限"
             aria-describedby={`${idPrefix}-visit-count-help`}
           />
-          <Label htmlFor={`${idPrefix}-visit-count-max`} className="font-normal text-gray-600">
+          <Label
+            htmlFor={`${idPrefix}-visit-count-max`}
+            className="font-normal text-gray-600"
+          >
             回以下
           </Label>
         </div>
@@ -182,7 +199,10 @@ export function RuleBuilder({
       {/* 累計利用額 */}
       <div className="space-y-1.5">
         <Label htmlFor={`${idPrefix}-total-spent`}>累計利用額</Label>
-        <p id={`${idPrefix}-total-spent-help`} className="text-xs text-gray-500">
+        <p
+          id={`${idPrefix}-total-spent-help`}
+          className="text-xs text-gray-500"
+        >
           完了した予約の合計金額です。よくご利用いただいているお客様の抽出にお使いいただけます。
         </p>
         <div className="flex items-center gap-2 pt-0.5">
@@ -206,7 +226,8 @@ export function RuleBuilder({
       <fieldset className="space-y-1.5">
         <legend className="text-sm font-medium text-gray-700">タグ</legend>
         <p className="text-xs text-gray-500">
-          選んだタグを<strong className="font-medium">すべて</strong>お持ちのお客様に絞り込みます。
+          選んだタグを<strong className="font-medium">すべて</strong>
+          お持ちのお客様に絞り込みます。
         </p>
         {tags.length === 0 ? (
           <p className="text-sm text-gray-500">
@@ -224,7 +245,7 @@ export function RuleBuilder({
                     "flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
                     checked
                       ? "border-brand bg-brand/10 text-brand-dark"
-                      : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                      : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50",
                   )}
                 >
                   <Checkbox
@@ -251,7 +272,11 @@ export function RuleBuilder({
         <div className="space-y-1.5">
           <Label htmlFor={`${idPrefix}-birthday-month`}>誕生月</Label>
           <Select
-            value={value.birthdayMonth !== undefined ? String(value.birthdayMonth) : NONE}
+            value={
+              value.birthdayMonth !== undefined
+                ? String(value.birthdayMonth)
+                : NONE
+            }
             onValueChange={setBirthdayMonth}
           >
             <SelectTrigger
@@ -269,7 +294,10 @@ export function RuleBuilder({
               ))}
             </SelectContent>
           </Select>
-          <p id={`${idPrefix}-birthday-month-help`} className="text-xs text-gray-500">
+          <p
+            id={`${idPrefix}-birthday-month-help`}
+            className="text-xs text-gray-500"
+          >
             誕生日が登録されているお客様のみ対象になります。
           </p>
         </div>
@@ -278,7 +306,10 @@ export function RuleBuilder({
         <div className="space-y-1.5">
           <Label htmlFor={`${idPrefix}-gender`}>性別</Label>
           <Select value={value.gender ?? NONE} onValueChange={setGender}>
-            <SelectTrigger id={`${idPrefix}-gender`} aria-describedby={`${idPrefix}-gender-help`}>
+            <SelectTrigger
+              id={`${idPrefix}-gender`}
+              aria-describedby={`${idPrefix}-gender-help`}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -297,7 +328,10 @@ export function RuleBuilder({
       <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3">
         <div>
           <Label htmlFor={`${idPrefix}-has-line`}>LINE連携済みのみ</Label>
-          <p id={`${idPrefix}-has-line-help`} className="mt-0.5 text-xs text-gray-500">
+          <p
+            id={`${idPrefix}-has-line-help`}
+            className="mt-0.5 text-xs text-gray-500"
+          >
             LINEを連携しているお客様に絞り込みます。メッセージを実際に届けられるのはこのお客様のみです。
           </p>
         </div>

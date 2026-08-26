@@ -11,7 +11,8 @@ import { ServicesTab } from "./services-tab";
 import { StaffTab } from "./staff-tab";
 import { LineTab } from "./line-tab";
 
-export type SettingsTabValue = "store" | "hours" | "services" | "staff" | "line";
+export type SettingsTabValue =
+  "store" | "hours" | "services" | "staff" | "line";
 
 export type StoreInfoData = {
   name: string;
@@ -87,7 +88,10 @@ export function SettingsTabs({
     <Tabs value={tab} onValueChange={handleChange}>
       {/* 幅の狭い画面ではタブが折り返さず横スクロールする（ページ全体は横スクロールしない） */}
       <div className="-mx-1 overflow-x-auto px-1 pb-1">
-        <TabsList aria-label="設定のカテゴリ" className="w-max min-w-full justify-start">
+        <TabsList
+          aria-label="設定のカテゴリ"
+          className="w-max min-w-full justify-start"
+        >
           <TabsTrigger value="store" className="h-8 px-3">
             店舗情報
           </TabsTrigger>

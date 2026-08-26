@@ -3,7 +3,10 @@ import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { parseSurveyQuestions } from "@/app/api/surveys/schema";
 import { PageHeader } from "@/components/ui/page-header";
-import { SurveyForm, type SurveyFormInitial } from "../../_components/survey-form";
+import {
+  SurveyForm,
+  type SurveyFormInitial,
+} from "../../_components/survey-form";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "アンケートの編集" };
@@ -40,7 +43,11 @@ export default async function EditSurveyPage({
         title="アンケートを編集"
         description="質問の変更は、これから送る回答依頼から反映されます。"
       />
-      <SurveyForm surveyId={survey.id} storeName={store?.name ?? ""} initial={initial} />
+      <SurveyForm
+        surveyId={survey.id}
+        storeName={store?.name ?? ""}
+        initial={initial}
+      />
     </>
   );
 }

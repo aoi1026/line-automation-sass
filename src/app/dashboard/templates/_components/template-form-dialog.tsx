@@ -43,17 +43,17 @@ const CONTENT_MAX = 5000;
 
 function buildSampleVars(storeName: string): TemplateVars {
   return {
-    "お客様名": "山田花子",
-    "店舗名": storeName,
-    "予約日時": "2026年9月1日(火) 14:30",
-    "メニュー名": "カット＋カラー",
-    "担当者名": "佐藤",
-    "前回来店日": "2026年7月15日(水)",
-    "経過日数": "42",
-    "クーポンリンク": "https://repinavi.example/c/sample",
-    "アンケートリンク": "https://repinavi.example/s/sample",
-    "予約リンク": "https://repinavi.example/r/sample",
-    "予約確認リンク": "https://repinavi.example/v/sample",
+    お客様名: "山田花子",
+    店舗名: storeName,
+    予約日時: "2026年9月1日(火) 14:30",
+    メニュー名: "カット＋カラー",
+    担当者名: "佐藤",
+    前回来店日: "2026年7月15日(水)",
+    経過日数: "42",
+    クーポンリンク: "https://repinavi.example/c/sample",
+    アンケートリンク: "https://repinavi.example/s/sample",
+    予約リンク: "https://repinavi.example/r/sample",
+    予約確認リンク: "https://repinavi.example/v/sample",
   };
 }
 
@@ -72,7 +72,9 @@ export function TemplateFormDialog({
   defaultKind?: MessageKind;
 }) {
   const router = useRouter();
-  const [kind, setKind] = React.useState<MessageKind>(initial?.kind ?? defaultKind ?? "REMINDER");
+  const [kind, setKind] = React.useState<MessageKind>(
+    initial?.kind ?? defaultKind ?? "REMINDER",
+  );
   const [name, setName] = React.useState(initial?.name ?? "");
   const [content, setContent] = React.useState(initial?.content ?? "");
   const [nameError, setNameError] = React.useState<string | null>(null);
@@ -91,8 +93,14 @@ export function TemplateFormDialog({
     }
   }, [open, initial, defaultKind]);
 
-  const sampleVars = React.useMemo(() => buildSampleVars(storeName), [storeName]);
-  const preview = React.useMemo(() => renderTemplate(content, sampleVars), [content, sampleVars]);
+  const sampleVars = React.useMemo(
+    () => buildSampleVars(storeName),
+    [storeName],
+  );
+  const preview = React.useMemo(
+    () => renderTemplate(content, sampleVars),
+    [content, sampleVars],
+  );
   const remaining = CONTENT_MAX - content.length;
 
   function insertPlaceholder(key: string) {
@@ -126,7 +134,9 @@ export function TemplateFormDialog({
       setContentError("本文を入力してください");
       invalid = true;
     } else if (content.length > CONTENT_MAX) {
-      setContentError(`本文は${formatNumber(CONTENT_MAX)}文字以内でご入力ください`);
+      setContentError(
+        `本文は${formatNumber(CONTENT_MAX)}文字以内でご入力ください`,
+      );
       invalid = true;
     } else {
       setContentError(null);
@@ -138,12 +148,17 @@ export function TemplateFormDialog({
 
     setSaving(true);
     try {
-      const res = await fetch(initial ? `/api/templates/${initial.id}` : "/api/templates", {
-        method: initial ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, name, content }),
-      });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const res = await fetch(
+        initial ? `/api/templates/${initial.id}` : "/api/templates",
+        {
+          method: initial ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind, name, content }),
+        },
+      );
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       if (!res.ok) {
         toast.error(data?.error ?? "保存に失敗しました");
         return;
@@ -160,9 +175,12 @@ export function TemplateFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{initial ? "テンプレートを編集" : "テンプレートを作成"}</DialogTitle>
+          <DialogTitle>
+            {initial ? "テンプレートを編集" : "テンプレートを作成"}
+          </DialogTitle>
           <DialogDescription>
-            {"{お客様名}"} などのプレースホルダー（差し込み項目）は、送信時にお客様ごとの内容へ自動で置き換わります。
+            {"{お客様名}"}{" "}
+            などのプレースホルダー（差し込み項目）は、送信時にお客様ごとの内容へ自動で置き換わります。
           </DialogDescription>
         </DialogHeader>
 
@@ -170,8 +188,15 @@ export function TemplateFormDialog({
           <div className="flex flex-col gap-4">
             <div>
               <Label htmlFor="template-kind">種別</Label>
-              <Select value={kind} onValueChange={(v) => setKind(v as MessageKind)}>
-                <SelectTrigger id="template-kind" className="mt-1.5" aria-describedby="template-kind-help">
+              <Select
+                value={kind}
+                onValueChange={(v) => setKind(v as MessageKind)}
+              >
+                <SelectTrigger
+                  id="template-kind"
+                  className="mt-1.5"
+                  aria-describedby="template-kind-help"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -208,11 +233,17 @@ export function TemplateFormDialog({
                 aria-required="true"
                 aria-invalid={nameError ? true : undefined}
                 aria-describedby={
-                  nameError ? "template-name-error template-name-help" : "template-name-help"
+                  nameError
+                    ? "template-name-error template-name-help"
+                    : "template-name-help"
                 }
               />
               {nameError && (
-                <p id="template-name-error" role="alert" className="mt-1 text-xs text-red-600">
+                <p
+                  id="template-name-error"
+                  role="alert"
+                  className="mt-1 text-xs text-red-600"
+                >
                   {nameError}
                 </p>
               )}
@@ -232,7 +263,9 @@ export function TemplateFormDialog({
                 <span
                   aria-live="polite"
                   className={
-                    remaining < 0 ? "text-xs font-medium text-red-600" : "text-xs text-gray-400"
+                    remaining < 0
+                      ? "text-xs font-medium text-red-600"
+                      : "text-xs text-gray-400"
                   }
                 >
                   残り{formatNumber(remaining)}文字
@@ -248,7 +281,9 @@ export function TemplateFormDialog({
                   setContent(e.target.value);
                   if (contentError) setContentError(null);
                 }}
-                placeholder={"{お客様名}様\n\nいつもご利用ありがとうございます。"}
+                placeholder={
+                  "{お客様名}様\n\nいつもご利用ありがとうございます。"
+                }
                 required
                 aria-required="true"
                 aria-invalid={contentError ? true : undefined}
@@ -259,11 +294,18 @@ export function TemplateFormDialog({
                 }
               />
               {contentError && (
-                <p id="template-content-error" role="alert" className="mt-1 text-xs text-red-600">
+                <p
+                  id="template-content-error"
+                  role="alert"
+                  className="mt-1 text-xs text-red-600"
+                >
                   {contentError}
                 </p>
               )}
-              <p id="template-content-help" className="mt-2 text-xs text-gray-500">
+              <p
+                id="template-content-help"
+                className="mt-2 text-xs text-gray-500"
+              >
                 下のボタンを押すと、カーソル位置に差し込み項目を挿入できます（LINEのメッセージは
                 {formatNumber(CONTENT_MAX)}文字までです）。
               </p>
@@ -299,7 +341,9 @@ export function TemplateFormDialog({
                   {(storeName || "店").slice(0, 1)}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="mb-1 truncate text-xs text-white/90">{storeName || "店舗名"}</p>
+                  <p className="mb-1 truncate text-xs text-white/90">
+                    {storeName || "店舗名"}
+                  </p>
                   {preview.trim() === "" ? (
                     <p className="rounded-2xl rounded-tl-sm bg-white/80 px-4 py-6 text-center text-sm text-gray-500">
                       本文を入力するとここに表示されます
@@ -309,7 +353,9 @@ export function TemplateFormDialog({
                       <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tl-sm bg-white px-3.5 py-2.5 text-sm leading-relaxed text-gray-900 shadow-sm">
                         {preview}
                       </div>
-                      <span className="shrink-0 text-[10px] text-white/80">14:30</span>
+                      <span className="shrink-0 text-[10px] text-white/80">
+                        14:30
+                      </span>
                     </div>
                   )}
                 </div>
@@ -319,7 +365,11 @@ export function TemplateFormDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             キャンセル
           </Button>
           <Button onClick={handleSave} disabled={saving}>

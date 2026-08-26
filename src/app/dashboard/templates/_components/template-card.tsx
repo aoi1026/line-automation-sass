@@ -52,7 +52,9 @@ export function TemplateCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled }),
       });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       if (!res.ok) {
         toast.error(data?.error ?? "保存に失敗しました");
         return;
@@ -77,7 +79,9 @@ export function TemplateCard({
           enabled: template.enabled,
         }),
       });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       if (!res.ok) {
         toast.error(data?.error ?? "複製に失敗しました");
         return;
@@ -92,8 +96,12 @@ export function TemplateCard({
   async function handleDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/templates/${template.id}`, { method: "DELETE" });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const res = await fetch(`/api/templates/${template.id}`, {
+        method: "DELETE",
+      });
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       if (!res.ok) {
         toast.error(data?.error ?? "削除に失敗しました");
         return;
@@ -111,7 +119,9 @@ export function TemplateCard({
       <CardContent className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate font-medium text-gray-900">{template.name}</p>
+            <p className="truncate font-medium text-gray-900">
+              {template.name}
+            </p>
             {template.usedByAutomation && (
               <Badge className="mt-1.5">自動配信で使用中</Badge>
             )}
@@ -129,7 +139,9 @@ export function TemplateCard({
         </p>
 
         <p className="text-xs text-gray-400">
-          {template.enabled ? "自動配信で選択できます" : "無効のため自動配信では選択できません"}
+          {template.enabled
+            ? "自動配信で選択できます"
+            : "無効のため自動配信では選択できません"}
         </p>
 
         <p className="text-xs text-gray-400">更新日: {template.updatedLabel}</p>
@@ -194,10 +206,18 @@ export function TemplateCard({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+            <Button
+              variant="ghost"
+              onClick={() => setDeleteOpen(false)}
+              disabled={deleting}
+            >
               キャンセル
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
               {deleting ? "削除中…" : "削除する"}
             </Button>
           </DialogFooter>

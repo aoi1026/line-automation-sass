@@ -6,12 +6,22 @@ import { toast } from "sonner";
 import type { BusinessHours, BusinessHoursDay } from "@/lib/constants";
 import { DAY_KEYS, DAY_LABELS_JA, type DayKey } from "@/lib/jst";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
-export function BusinessHoursForm({ initialHours }: { initialHours: BusinessHours }) {
+export function BusinessHoursForm({
+  initialHours,
+}: {
+  initialHours: BusinessHours;
+}) {
   const router = useRouter();
   const [hours, setHours] = useState<BusinessHours>(initialHours);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +60,9 @@ export function BusinessHoursForm({ initialHours }: { initialHours: BusinessHour
         toast.success("営業時間を保存しました");
         router.refresh();
       } else {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         toast.error(body?.error ?? "保存に失敗しました");
       }
     } finally {
@@ -84,10 +96,15 @@ export function BusinessHoursForm({ initialHours }: { initialHours: BusinessHour
                   <Switch
                     id={`closed-${day}`}
                     checked={d.closed}
-                    onCheckedChange={(checked) => updateDay(day, { closed: checked })}
+                    onCheckedChange={(checked) =>
+                      updateDay(day, { closed: checked })
+                    }
                     aria-label={`${DAY_LABELS_JA[day]}曜日を定休日にする`}
                   />
-                  <Label htmlFor={`closed-${day}`} className="cursor-pointer text-gray-600">
+                  <Label
+                    htmlFor={`closed-${day}`}
+                    className="cursor-pointer text-gray-600"
+                  >
                     定休日
                   </Label>
                 </div>

@@ -47,7 +47,9 @@ export default async function EditCampaignPage({
               : null,
           couponId: campaign.couponId,
           status: campaign.status,
-          scheduledAt: campaign.scheduledAt ? campaign.scheduledAt.toISOString() : null,
+          scheduledAt: campaign.scheduledAt
+            ? campaign.scheduledAt.toISOString()
+            : null,
         }}
       />
     </>
