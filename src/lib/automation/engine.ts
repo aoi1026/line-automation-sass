@@ -27,7 +27,32 @@ export type AutomationSummary = {
  * リマインダー / 来店お礼 / 再来店リマインド / 誕生日 / キャンペーン配信 を実行する。
  * 冪等: 送信済み判定はMessageLogに基づくため、何度実行しても重複送信しない。
  */
+/**
+ * 実行中フラグ。runAutomations は次の3経路から起動されうる:
+ *   - instrumentation の setInterval（アプリ内スケジューラ）
+ *   - GET /api/cron/run（外部cron）
+ *   - POST /api/automations/run（管理画面の「今すぐ実行」）
+ * 同時に走ると、送信済み判定を両方が通過してお客様へ二重にメッセージが届く。
+ * 同一プロセス内の重複起動をここで直列化する。
+ *
+ * 注: 複数インスタンス構成ではプロセスをまたげないため、外部cronは
+ * 単一インスタンスに向けるか、DBロックへの置き換えが必要（docs/DEPLOY.md 参照）。
+ */
+let running: Promise<AutomationSummary> | null = null;
+
 export async function runAutomations(opts?: {
+  storeId?: string;
+  now?: Date;
+}): Promise<AutomationSummary> {
+  // 既に実行中なら、その完了を待って同じ結果を返す（多重実行しない）
+  if (running) return running;
+  running = doRunAutomations(opts).finally(() => {
+    running = null;
+  });
+  return running;
+}
+
+async function doRunAutomations(opts?: {
   storeId?: string;
   now?: Date;
 }): Promise<AutomationSummary> {
