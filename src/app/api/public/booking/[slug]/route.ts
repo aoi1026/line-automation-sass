@@ -1,0 +1,126 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { jsonError, notFound, parseBody } from "@/lib/api";
+import { addMinutes, fromJst } from "@/lib/jst";
+import { notifyReservationEvent } from "@/lib/messaging";
+import { computeDaySlots } from "./shared";
+
+export const dynamic = "force-dynamic";
+
+const bodySchema = z.object({
+  serviceId: z.string().min(1, "メニューを選択してください"),
+  staffId: z.string().min(1).nullable().optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません")
+    .refine((d) => !Number.isNaN(fromJst(d).getTime()), "日付が正しくありません"),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "時刻の形式が正しくありません"),
+  name: z.string().trim().min(1, "お名前を入力してください").max(100),
+  kana: z.string().trim().max(100).optional(),
+  phone: z
+    .string()
+    .trim()
+    .min(8, "電話番号を正しく入力してください")
+    .max(20, "電話番号を正しく入力してください")
+    .regex(/^[0-9+\-() ]+$/, "電話番号を正しく入力してください"),
+  email: z
+    .string()
+    .trim()
+    .email("メールアドレスの形式が正しくありません")
+    .or(z.literal(""))
+    .optional(),
+  note: z.string().max(1000, "ご要望は1000文字以内で入力してください").optional(),
+});
+
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const { slug } = await params;
+  const { data, error } = await parseBody(req, bodySchema);
+  if (error) return error;
+
+  const store = await prisma.store.findUnique({ where: { slug } });
+  if (!store) return notFound("店舗が見つかりませんでした");
+
+  const service = await prisma.service.findFirst({
+    where: { id: data.serviceId, storeId: store.id, active: true },
+  });
+  if (!service) return notFound("メニューが見つかりませんでした");
+
+  const staffId = data.staffId ?? null;
+  if (staffId) {
+    const staff = await prisma.staffMember.findFirst({
+      where: { id: staffId, storeId: store.id, active: true },
+    });
+    if (!staff) return notFound("スタッフが見つかりませんでした");
+  }
+
+  // サーバー側で空き状況を再検証（クライアント表示後に埋まっている可能性があるため）
+  const slots = await computeDaySlots({
+    store,
+    service,
+    staffId,
+    dateYmd: data.date,
+  });
+  if (!slots.includes(data.time)) {
+    return jsonError(
+      "申し訳ありません。その時間は埋まってしまいました。別の時間をお選びください",
+      409
+    );
+  }
+
+  const kana = data.kana?.trim() ?? "";
+  const email = data.email?.trim() ?? "";
+  const note = data.note?.trim() ?? "";
+
+  // 顧客の特定: 同一店舗・同一電話番号・同一氏名なら既存顧客として扱う
+  let customer = await prisma.customer.findFirst({
+    where: { storeId: store.id, phone: data.phone, name: data.name },
+  });
+  if (customer) {
+    const updates: { kana?: string; email?: string } = {};
+    if (kana && kana !== customer.kana) updates.kana = kana;
+    if (email && email !== customer.email) updates.email = email;
+    if (Object.keys(updates).length > 0) {
+      customer = await prisma.customer.update({
+        where: { id: customer.id },
+        data: updates,
+      });
+    }
+  } else {
+    customer = await prisma.customer.create({
+      data: {
+        storeId: store.id,
+        name: data.name,
+        kana,
+        phone: data.phone,
+        email,
+      },
+    });
+  }
+
+  const startAt = fromJst(data.date, data.time);
+  const endAt = addMinutes(startAt, service.durationMin);
+
+  const reservation = await prisma.reservation.create({
+    data: {
+      storeId: store.id,
+      customerId: customer.id,
+      serviceId: service.id,
+      staffId,
+      startAt,
+      endAt,
+      status: "PENDING",
+      source: "WEB",
+      price: service.price,
+      note,
+    },
+  });
+
+  // 自動配信（予約確認）が有効な店舗のみ実送信される。無効時は何もしない。
+  await notifyReservationEvent(reservation.id, "BOOKING_CONFIRMATION");
+
+  return NextResponse.json({ publicToken: reservation.publicToken });
+}
