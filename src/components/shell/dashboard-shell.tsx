@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
+import { NotificationBell } from "./notification-bell";
 import { MOBILE_NAV_ITEMS, NAV_ITEMS } from "./nav-items";
 
 function isActive(pathname: string, href: string): boolean {
@@ -19,11 +20,13 @@ export function DashboardShell({
   storeName,
   userName,
   lineConfigured,
+  unreadCount,
   children,
 }: {
   storeName: string;
   userName: string;
   lineConfigured: boolean;
+  unreadCount: number;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -126,6 +129,7 @@ export function DashboardShell({
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-gray-900">{storeName}</p>
         </div>
+        <NotificationBell initialUnread={unreadCount} />
         {lineConfigured ? (
           <Badge>LINE連携済み</Badge>
         ) : (

@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { CalendarX2, MapPin, Phone } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { resolveBusinessHours } from "@/app/api/public/booking/[slug]/shared";
+import { getHolidayYmds } from "@/lib/holidays";
 import {
   DAY_LABELS_JA,
   addDays,
+  fromJst,
   jstDayKey,
   jstParts,
   jstYmd,
@@ -52,7 +54,12 @@ export default async function PublicBookingPage({
     );
   }
 
-  const [services, staff] = await Promise.all([
+  // 今日から30日分（JST）の臨時休業日を先に取得しておく
+  const now = new Date();
+  const rangeStart = fromJst(jstYmd(now));
+  const rangeEnd = fromJst(jstYmd(addDays(now, 29)));
+
+  const [services, staff, holidayYmds] = await Promise.all([
     prisma.service.findMany({
       where: { storeId: store.id, active: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -70,21 +77,25 @@ export default async function PublicBookingPage({
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true, title: true },
     }),
+    getHolidayYmds(store.id, rangeStart, rangeEnd),
   ]);
 
-  // 今日から30日分の日付候補（JST・定休日は選択不可）
+  // 今日から30日分の日付候補（JST・定休日と臨時休業日は選択不可）
   const businessHours = resolveBusinessHours(store.businessHours);
-  const now = new Date();
+  const holidaySet = new Set(holidayYmds);
   const dates: DateOption[] = Array.from({ length: 30 }, (_, i) => {
     const d = addDays(now, i);
     const dayKey = jstDayKey(d);
     const { month, day } = jstParts(d);
+    const ymd = jstYmd(d);
+    const holiday = holidaySet.has(ymd);
     return {
-      ymd: jstYmd(d),
+      ymd,
       md: `${month}/${day}`,
       dow: DAY_LABELS_JA[dayKey],
       dayKey,
-      closed: businessHours[dayKey].closed,
+      closed: businessHours[dayKey].closed || holiday,
+      holiday,
       isToday: i === 0,
     };
   });

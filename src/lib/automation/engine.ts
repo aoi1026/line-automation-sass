@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { notify } from "@/lib/notifications";
 import { runBirthday } from "./birthday";
 import { runCampaigns } from "./campaigns";
 import { runRebooking } from "./rebooking";
@@ -60,6 +61,16 @@ export async function runAutomations(opts?: {
       const message = e instanceof Error ? e.message : String(e);
       summary.errors.push(`店舗 ${store.name}: ${message}`);
       console.error(`[automation] 店舗「${store.name}」の自動配信でエラー:`, e);
+
+      // 店舗スタッフ向けの通知（無人実行のため、失敗に気付けるようにする）。
+      // notify() は内部で例外を握りつぶすため、他店舗の処理を妨げることはない
+      await notify({
+        storeId: store.id,
+        type: "AUTOMATION_FAILED",
+        title: "自動配信のエラー",
+        body: `自動配信の処理中にエラーが発生しました。${message}`,
+        link: "/dashboard/automations",
+      });
     }
   }
   return summary;

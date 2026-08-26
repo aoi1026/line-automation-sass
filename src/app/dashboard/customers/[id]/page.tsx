@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import { KarteSection, type KarteRow } from "./_components/karte-section";
+import type { StaffOption } from "./_components/karte-form-dialog";
+import { NextNoteCard } from "./_components/next-note-card";
 import { CustomerFormDialog } from "../_components/customer-form-dialog";
 import { CustomerTabs, type MessageLogRow, type ReservationRow } from "../_components/customer-tabs";
 import { DeleteCustomerButton } from "../_components/delete-customer-button";
@@ -33,22 +36,33 @@ export default async function CustomerDetailPage({
   const session = await requireSession();
   const { id } = await params;
 
-  const [customer, storeTags, reservations, messageLogs] = await Promise.all([
-    prisma.customer.findFirst({
-      where: { id, storeId: session.storeId },
-      include: { tags: { include: { tag: true } } },
-    }),
-    prisma.tag.findMany({ where: { storeId: session.storeId }, orderBy: { name: "asc" } }),
-    prisma.reservation.findMany({
-      where: { customerId: id, storeId: session.storeId },
-      include: { service: true, staff: true },
-      orderBy: { startAt: "desc" },
-    }),
-    prisma.messageLog.findMany({
-      where: { customerId: id, storeId: session.storeId },
-      orderBy: { sentAt: "desc" },
-    }),
-  ]);
+  const [customer, storeTags, reservations, messageLogs, treatmentRecords, activeStaff] =
+    await Promise.all([
+      prisma.customer.findFirst({
+        where: { id, storeId: session.storeId },
+        include: { tags: { include: { tag: true } } },
+      }),
+      prisma.tag.findMany({ where: { storeId: session.storeId }, orderBy: { name: "asc" } }),
+      prisma.reservation.findMany({
+        where: { customerId: id, storeId: session.storeId },
+        include: { service: true, staff: true },
+        orderBy: { startAt: "desc" },
+      }),
+      prisma.messageLog.findMany({
+        where: { customerId: id, storeId: session.storeId },
+        orderBy: { sentAt: "desc" },
+      }),
+      prisma.treatmentRecord.findMany({
+        where: { customerId: id, storeId: session.storeId },
+        include: { staff: { select: { id: true, name: true } } },
+        orderBy: [{ visitedAt: "desc" }, { createdAt: "desc" }],
+      }),
+      prisma.staffMember.findMany({
+        where: { storeId: session.storeId, active: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { id: true, name: true },
+      }),
+    ]);
   if (!customer) notFound();
 
   const now = new Date();
@@ -74,6 +88,29 @@ export default async function CustomerDetailPage({
     status: m.status,
     channel: m.channel,
   }));
+
+  const karteRows: KarteRow[] = treatmentRecords.map((r) => ({
+    id: r.id,
+    visitedAt: jstYmd(r.visitedAt),
+    visitedAtLabel: formatJstDate(r.visitedAt),
+    serviceName: r.serviceName,
+    staffId: r.staffId ?? "",
+    staffName: r.staff?.name ?? "",
+    content: r.content,
+    materials: r.materials,
+    nextNote: r.nextNote,
+    reservationId: r.reservationId,
+  }));
+
+  // 退職などで非表示になったスタッフも、記録済みのカルテの担当として選べるようにする
+  const staffOptions: StaffOption[] = [...activeStaff];
+  for (const record of treatmentRecords) {
+    if (record.staff && !staffOptions.some((s) => s.id === record.staff?.id)) {
+      staffOptions.push({ id: record.staff.id, name: record.staff.name });
+    }
+  }
+
+  const latestNextNote = treatmentRecords.find((r) => r.nextNote.trim() !== "");
 
   return (
     <>
@@ -116,6 +153,15 @@ export default async function CustomerDetailPage({
           </div>
         }
       />
+
+      {latestNextNote && (
+        <NextNoteCard
+          note={latestNextNote.nextNote}
+          visitedAtLabel={formatJstDate(latestNextNote.visitedAt)}
+          serviceName={latestNextNote.serviceName}
+          staffName={latestNextNote.staff?.name ?? ""}
+        />
+      )}
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card>
@@ -190,6 +236,14 @@ export default async function CustomerDetailPage({
               ? customer.linkCodeExpiresAt.toISOString()
               : null
           }
+        />
+      </div>
+
+      <div className="mb-6">
+        <KarteSection
+          customerId={customer.id}
+          records={karteRows}
+          staffOptions={staffOptions}
         />
       </div>
 

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError, notFound, parseBody } from "@/lib/api";
-import { addMinutes, fromJst } from "@/lib/jst";
+import { addMinutes, formatJstDateTime, fromJst } from "@/lib/jst";
 import { notifyReservationEvent } from "@/lib/messaging";
+import { notify } from "@/lib/notifications";
 import { computeDaySlots } from "./shared";
 
 export const dynamic = "force-dynamic";
@@ -117,6 +118,16 @@ export async function POST(
       price: service.price,
       note,
     },
+  });
+
+  // 店舗スタッフ向けの通知（Web予約は未確定のため、確定操作を促す）。
+  // notify() は内部で例外を握りつぶすため、予約の登録を妨げることはない
+  await notify({
+    storeId: store.id,
+    type: "NEW_WEB_RESERVATION",
+    title: `${customer.name}様からWeb予約`,
+    body: `${formatJstDateTime(startAt)}に「${service.name}」のご予約を受け付けました。内容をご確認ください。`,
+    link: `/dashboard/reservations/${reservation.id}`,
   });
 
   // 自動配信（予約確認）が有効な店舗のみ実送信される。無効時は何もしない。

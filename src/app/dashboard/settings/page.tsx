@@ -39,7 +39,7 @@ export default async function SettingsPage({
     ? (tab as SettingsTabValue)
     : "store";
 
-  const [store, services, staffMembers] = await Promise.all([
+  const [store, services, staffMembers, holidays] = await Promise.all([
     prisma.store.findUnique({ where: { id: session.storeId } }),
     prisma.service.findMany({
       where: { storeId: session.storeId },
@@ -48,6 +48,10 @@ export default async function SettingsPage({
     prisma.staffMember.findMany({
       where: { storeId: session.storeId },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }),
+    prisma.storeHoliday.findMany({
+      where: { storeId: session.storeId },
+      orderBy: { date: "asc" },
     }),
   ]);
   if (!store) redirect("/login");
@@ -72,6 +76,11 @@ export default async function SettingsPage({
           reserveUrl: `${appUrl}/r/${store.slug}`,
         }}
         businessHours={parseBusinessHours(store.businessHours)}
+        holidays={holidays.map((h) => ({
+          id: h.id,
+          date: h.date.toISOString(),
+          reason: h.reason,
+        }))}
         services={services.map((s) => ({
           id: s.id,
           name: s.name,

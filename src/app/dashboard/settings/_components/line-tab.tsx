@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2, Copy, ExternalLink, TriangleAlert, Unlink } from "lucide-react";
+import { CheckCircle2, Copy, ExternalLink, Send, TriangleAlert, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,8 +16,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { LineInfo } from "./settings-tabs";
+
+/** 接続テストの送信先候補（GET /api/customers の結果から必要な項目のみ利用） */
+type LinkedCustomer = { id: string; name: string; kana: string };
 
 export function LineTab({ line }: { line: LineInfo }) {
   const router = useRouter();
@@ -27,6 +37,71 @@ export function LineTab({ line }: { line: LineInfo }) {
   const [saving, setSaving] = useState(false);
   const [unlinkOpen, setUnlinkOpen] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
+  const [linkedCustomers, setLinkedCustomers] = useState<LinkedCustomer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [customersError, setCustomersError] = useState(false);
+  const [testCustomerId, setTestCustomerId] = useState("");
+  const [testing, setTesting] = useState(false);
+
+  // 一覧APIにLINE連携での絞り込みがないため、取得した顧客をクライアント側で絞り込む
+  const loadLinkedCustomers = useCallback(async () => {
+    setLoadingCustomers(true);
+    setCustomersError(false);
+    try {
+      const res = await fetch("/api/customers");
+      if (!res.ok) {
+        setCustomersError(true);
+        return;
+      }
+      const data = (await res.json()) as (LinkedCustomer & { lineUserId: string | null })[];
+      setLinkedCustomers(
+        data
+          .filter((c) => Boolean(c.lineUserId))
+          .map((c) => ({ id: c.id, name: c.name, kana: c.kana }))
+      );
+    } catch {
+      setCustomersError(true);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!line.configured) return;
+    void loadLinkedCustomers();
+  }, [line.configured, loadLinkedCustomers]);
+
+  const sendTest = async () => {
+    if (!testCustomerId || testing) return;
+    setTesting(true);
+    try {
+      const res = await fetch("/api/line/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId: testCustomerId }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        status?: string;
+        channel?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        toast.error(data.error ?? "テストメッセージの送信に失敗しました");
+        return;
+      }
+      // HTTPは200でも送信自体が失敗している場合があるため、送信結果も確認する
+      if (data.status !== "SENT") {
+        toast.error(data.error || "テストメッセージの送信に失敗しました");
+        return;
+      }
+      toast.success("テストメッセージを送信しました");
+      router.refresh();
+    } catch {
+      toast.error("通信に失敗しました。もう一度お試しください");
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const copyWebhookUrl = async () => {
     try {
@@ -204,6 +279,64 @@ export function LineTab({ line }: { line: LineInfo }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* 接続テスト（LINE連携済みのときのみ表示） */}
+      {line.configured && (
+        <Card>
+          <CardHeader>
+            <CardTitle>接続テスト</CardTitle>
+            <CardDescription>
+              選択したお客様のLINEへ、実際にテストメッセージが送信されます。設定が正しく完了しているかをご確認いただけます。
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {loadingCustomers ? (
+              <p className="text-sm text-gray-500">送信先のお客様を読み込んでいます…</p>
+            ) : customersError ? (
+              <div className="flex flex-col items-start gap-2">
+                <p className="text-sm text-gray-500">
+                  お客様の一覧を読み込めませんでした。お手数ですが、もう一度お試しください。
+                </p>
+                <Button variant="outline" onClick={() => void loadLinkedCustomers()}>
+                  再読み込み
+                </Button>
+              </div>
+            ) : linkedCustomers.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                LINE連携済みのお客様がいないため、テスト送信できません。お客様に友だち追加していただくと、こちらから送信先を選べるようになります。
+              </p>
+            ) : (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="line-test-customer">送信先のお客様</Label>
+                  <Select value={testCustomerId} onValueChange={setTestCustomerId}>
+                    <SelectTrigger id="line-test-customer" className="max-w-sm">
+                      <SelectValue placeholder="LINE連携済みのお客様を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {linkedCustomers.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.name}
+                          {customer.kana ? `（${customer.kana}）` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500">
+                    LINE連携済みのお客様のみ表示しています。テスト用の文面が1通送信されます。
+                  </p>
+                </div>
+                <div>
+                  <Button onClick={sendTest} disabled={!testCustomerId || testing}>
+                    <Send />
+                    {testing ? "送信中…" : "テストを送信"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* セットアップ手順 */}
       <Card>

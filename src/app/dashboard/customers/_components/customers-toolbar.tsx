@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { TagManageDialog, type TagOption } from "./tag-manage-dialog";
+import { CustomersExportButton } from "./customers-export-button";
+import { CustomersImportDialog } from "./customers-import-dialog";
 
 /** 顧客一覧の検索・タグ絞り込みツールバー */
 export function CustomersToolbar({
@@ -48,10 +50,15 @@ export function CustomersToolbar({
             className="pl-9"
           />
         </div>
-        <Button type="submit" variant="outline">
-          検索
-        </Button>
-        <TagManageDialog tags={tags} />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="submit" variant="outline">
+            検索
+          </Button>
+          <TagManageDialog tags={tags} />
+          {/* 書き出しは画面の絞り込み（検索・タグ）をそのまま引き継ぐ */}
+          <CustomersExportButton q={initialQ} tagId={initialTag} />
+          <CustomersImportDialog />
+        </div>
       </form>
 
       {tags.length > 0 && (

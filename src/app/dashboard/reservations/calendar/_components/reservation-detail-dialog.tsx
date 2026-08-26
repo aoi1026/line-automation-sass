@@ -1,0 +1,138 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ExternalLink } from "lucide-react";
+import { toast } from "sonner";
+import type { ReservationStatus } from "@prisma/client";
+import { formatJstDate, fromJst } from "@/lib/jst";
+import { formatYen } from "@/lib/utils";
+import {
+  RESERVATION_SOURCE_LABELS,
+  RESERVATION_STATUS_COLORS,
+  RESERVATION_STATUS_LABELS,
+} from "@/lib/constants";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { CalendarBlock } from "./types";
+
+function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-4">
+      <dt className="w-20 shrink-0 text-gray-500">{label}</dt>
+      <dd className="flex-1 text-gray-900">{children}</dd>
+    </div>
+  );
+}
+
+/** タイムグリッド上の予約ブロックをクリックしたときの詳細ダイアログ */
+export function ReservationDetailDialog({
+  block,
+  onOpenChange,
+}: {
+  block: CalendarBlock | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const router = useRouter();
+  const [submitting, setSubmitting] = React.useState(false);
+
+  async function changeStatus(next: ReservationStatus, message: string) {
+    if (!block) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/reservations/${block.id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(json.error ?? "ステータスの変更に失敗しました");
+        return;
+      }
+      toast.success(message);
+      onOpenChange(false);
+      router.refresh();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Dialog open={block !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        {block && (
+          <>
+            <DialogHeader>
+              <DialogTitle>予約の詳細</DialogTitle>
+              <DialogDescription>
+                {formatJstDate(fromJst(block.ymd))} {block.startTime}〜{block.endTime}
+              </DialogDescription>
+            </DialogHeader>
+
+            <dl className="space-y-3 text-sm">
+              <InfoRow label="ステータス">
+                <Badge className={RESERVATION_STATUS_COLORS[block.status]}>
+                  {RESERVATION_STATUS_LABELS[block.status]}
+                </Badge>
+              </InfoRow>
+              <InfoRow label="顧客">
+                <Link
+                  href={`/dashboard/customers/${block.customerId}`}
+                  className="font-medium text-brand hover:underline"
+                >
+                  {block.customerName}
+                </Link>
+              </InfoRow>
+              <InfoRow label="メニュー">{block.serviceName}</InfoRow>
+              <InfoRow label="担当">{block.staffName}</InfoRow>
+              <InfoRow label="料金">{formatYen(block.price)}</InfoRow>
+              <InfoRow label="経路">{RESERVATION_SOURCE_LABELS[block.source]}</InfoRow>
+              {block.note && (
+                <InfoRow label="メモ">
+                  <span className="whitespace-pre-wrap">{block.note}</span>
+                </InfoRow>
+              )}
+            </dl>
+
+            <DialogFooter>
+              <Link
+                href={`/dashboard/reservations/${block.id}`}
+                className={buttonVariants({ variant: "outline" })}
+              >
+                <ExternalLink />
+                詳細ページを開く
+              </Link>
+              {block.status === "PENDING" && (
+                <Button
+                  variant="secondary"
+                  disabled={submitting}
+                  onClick={() => void changeStatus("CONFIRMED", "予約を確定しました")}
+                >
+                  確定する
+                </Button>
+              )}
+              {(block.status === "PENDING" || block.status === "CONFIRMED") && (
+                <Button
+                  disabled={submitting}
+                  onClick={() => void changeStatus("COMPLETED", "来店済みにしました")}
+                >
+                  来店済みにする
+                </Button>
+              )}
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -44,7 +44,10 @@ export type DateOption = {
   md: string;
   dow: string;
   dayKey: DayKey;
+  /** 定休日または臨時休業日（選択不可） */
   closed: boolean;
+  /** 臨時休業日（ラベルの出し分けのみに使用） */
+  holiday?: boolean;
   isToday: boolean;
 };
 
@@ -505,7 +508,7 @@ export function BookingFlow({
                           selected ? "text-white/80" : "text-gray-400"
                         )}
                       >
-                        定休日
+                        {d.holiday ? "休業日" : "定休日"}
                       </span>
                     )}
                   </button>

@@ -2,6 +2,7 @@ import type { MessageKind } from "@prisma/client";
 import {
   BarChart3,
   CalendarCheck,
+  Clock,
   JapaneseYen,
   Repeat,
   Scissors,
@@ -9,6 +10,8 @@ import {
   Star,
   Ticket,
   UserPlus,
+  UserRound,
+  Users,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
@@ -31,9 +34,21 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import {
+  buildHourHeatmap,
+  buildRecencyDistribution,
+  buildStaffPerformance,
+  buildVisitCountDistribution,
+  resolveBusinessHours,
+  toStaffRevenueChartData,
+} from "./_components/analytics-data";
+import { HourHeatmap } from "./_components/hour-heatmap";
 import { MessageKindChart } from "./_components/message-kind-chart";
 import { PeriodTabs } from "./_components/period-tabs";
 import { PERIOD_LABELS, type PeriodDays } from "./_components/period";
+import { RetentionBars } from "./_components/retention-bars";
+import { StaffPerformanceTable } from "./_components/staff-performance-table";
+import { StaffRevenueChart } from "./_components/staff-revenue-chart";
 import { VisitsChart, type VisitsChartPoint } from "./_components/visits-chart";
 import { VisitsTrendChart } from "./_components/visits-trend-chart";
 
@@ -61,6 +76,9 @@ export default async function AnalyticsPage({
     couponUsedCount,
     ratingAgg,
     ratingGroups,
+    heatmapReservations,
+    customerStats,
+    store,
   ] = await Promise.all([
     // 期間内の来店済み予約
     prisma.reservation.findMany({
@@ -71,6 +89,8 @@ export default async function AnalyticsPage({
         price: true,
         serviceId: true,
         service: { select: { name: true } },
+        staffId: true,
+        staff: { select: { name: true } },
       },
       orderBy: { startAt: "asc" },
     }),
@@ -109,6 +129,25 @@ export default async function AnalyticsPage({
         rating: { not: null },
       },
       _count: { _all: true },
+    }),
+    // ヒートマップ用（キャンセル以外の予約すべて）
+    prisma.reservation.findMany({
+      where: {
+        storeId,
+        status: { not: "CANCELLED" },
+        startAt: { gte: periodStart, lt: periodEnd },
+      },
+      select: { startAt: true },
+    }),
+    // 定着状況（顧客全体の来店回数・最終来店日）
+    prisma.customer.findMany({
+      where: { storeId },
+      select: { visitCount: true, lastVisitAt: true },
+    }),
+    // ヒートマップの時間帯レンジに使う営業時間
+    prisma.store.findUnique({
+      where: { id: storeId },
+      select: { businessHours: true },
     }),
   ]);
 
@@ -212,6 +251,30 @@ export default async function AnalyticsPage({
     .slice(0, 5);
   const maxServiceCount = Math.max(1, ...topServices.map((s) => s.count));
 
+  // ===== スタッフ別実績 =====
+  const staffRows = buildStaffPerformance(completed);
+  const staffRevenueData = toStaffRevenueChartData(staffRows);
+
+  // ===== 曜日 × 時間帯ヒートマップ =====
+  const heatmap = buildHourHeatmap(
+    heatmapReservations.map((r) => r.startAt),
+    resolveBusinessHours(store?.businessHours)
+  );
+
+  // ===== 顧客の定着状況 =====
+  const visitDistribution = buildVisitCountDistribution(customerStats);
+  const recencyDistribution = buildRecencyDistribution(customerStats, now);
+  // 初回来店が期間内にあるお客様のうち、2回目の来店に繋がった人数
+  let firstTimerCount = 0;
+  let secondVisitCount = 0;
+  for (const g of lifetimeGroups) {
+    const firstVisit = g._min.startAt;
+    if (!firstVisit || firstVisit < periodStart || firstVisit >= periodEnd) continue;
+    firstTimerCount++;
+    if (g._count._all >= 2) secondVisitCount++;
+  }
+  const secondVisitRate = firstTimerCount > 0 ? secondVisitCount / firstTimerCount : null;
+
   const periodLabel = PERIOD_LABELS[days];
 
   return (
@@ -297,6 +360,71 @@ export default async function AnalyticsPage({
               />
             ) : (
               <VisitsChart data={buckets} />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* スタッフ別実績 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>スタッフ別実績</CardTitle>
+            <CardDescription>
+              {periodLabel}の来店済み予約を担当者別に集計しています。構成比は期間内の全施術数に占める割合です。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {staffRows.length === 0 ? (
+              <EmptyState
+                icon={<UserRound />}
+                title="対象期間のデータがありません"
+                description="予約を来店済みにすると、担当者別の実績がここに表示されます。"
+              />
+            ) : (
+              <div className="space-y-6">
+                <StaffPerformanceTable rows={staffRows} />
+                {staffRevenueData.length > 0 && (
+                  <div>
+                    <p className="mb-1 text-sm font-medium text-gray-900">売上上位</p>
+                    <p className="mb-2 text-xs text-gray-500">
+                      売上が多い順に最大8件を表示しています。
+                    </p>
+                    <StaffRevenueChart data={staffRevenueData} />
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 曜日×時間帯 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>曜日×時間帯の予約状況</CardTitle>
+            <CardDescription>
+              {periodLabel}の予約（キャンセルを除く）を曜日と時間帯で集計しています。混雑する時間帯の把握や、空き時間への送客キャンペーンにご活用ください。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {heatmap.total === 0 ? (
+              <EmptyState
+                icon={<Clock />}
+                title="対象期間のデータがありません"
+                description="予約が登録されると、曜日・時間帯ごとの傾向がここに表示されます。"
+              />
+            ) : (
+              <div className="space-y-4">
+                <HourHeatmap
+                  hours={heatmap.hours}
+                  rows={heatmap.rows}
+                  maxCount={heatmap.maxCount}
+                />
+                {heatmap.peak !== null && (
+                  <p className="rounded-lg bg-brand/10 px-3 py-2 text-xs font-medium text-brand-dark">
+                    最も予約が多いのは {heatmap.peak.dayLabel}曜 {heatmap.peak.hour}時台（
+                    {formatNumber(heatmap.peak.count)}件）です。
+                  </p>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -492,6 +620,72 @@ export default async function AnalyticsPage({
             </CardContent>
           </Card>
         </div>
+
+        {/* 顧客の定着状況 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>顧客の定着状況</CardTitle>
+            <CardDescription>
+              お客様の来店回数と、最終来店からの経過状況です。分布は現在の顧客全体が対象で、期間の切り替えによる影響を受けません。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {visitDistribution.total === 0 ? (
+              <EmptyState
+                icon={<Users />}
+                title="対象期間のデータがありません"
+                description="来店実績が登録されると、定着状況がここに表示されます。"
+              />
+            ) : (
+              <div className="space-y-6">
+                <div className="grid items-start gap-6 lg:grid-cols-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">来店回数の分布</p>
+                    <p className="mb-3 mt-0.5 text-xs text-gray-500">
+                      来店実績のあるお客様{formatNumber(visitDistribution.total)}人の内訳です。
+                    </p>
+                    <RetentionBars data={visitDistribution.bars} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      最終来店からの経過日数
+                    </p>
+                    <p className="mb-3 mt-0.5 text-xs text-gray-500">
+                      ご無沙汰のお客様には、「この層に配信」からキャンペーンを作成できます。
+                    </p>
+                    <RetentionBars data={recencyDistribution.bars} />
+                  </div>
+                </div>
+
+                {/* 新規のうち2回目に繋がった割合 */}
+                <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="text-sm font-medium text-gray-900">
+                      新規のうち2回目に繋がった割合
+                    </p>
+                    <p className="text-2xl font-bold tabular-nums text-brand-dark">
+                      {secondVisitRate === null ? "—" : formatPercent(secondVisitRate)}
+                    </p>
+                  </div>
+                  <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      className="h-full rounded-full bg-brand"
+                      style={{ width: `${(secondVisitRate ?? 0) * 100}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    {secondVisitRate === null
+                      ? `${periodLabel}に初めてご来店されたお客様はいません。`
+                      : `${periodLabel}に初来店のお客様${formatNumber(firstTimerCount)}人のうち、${formatNumber(secondVisitCount)}人が2回目のご来店に繋がりました。`}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
+                    ※ 初回のご来店（来店済みの予約）が{periodLabel}にあるお客様を対象に、その後2回目のご来店があった割合です。
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </>
   );

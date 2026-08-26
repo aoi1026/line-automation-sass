@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
-import { formatJstDateTime, formatJstTime, jstHm, jstYmd } from "@/lib/jst";
+import { formatJstDate, formatJstDateTime, formatJstTime, jstHm, jstYmd } from "@/lib/jst";
 import { formatYen } from "@/lib/utils";
 import {
   MESSAGE_CHANNEL_LABELS,
@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { ReservationKarteCard, type KarteStaffOption } from "./_components/karte-form";
 import { DeleteReservationButton } from "../_components/delete-reservation-button";
 import { ReservationForm } from "../_components/reservation-form";
 import { StatusActions } from "../_components/status-actions";
@@ -51,6 +52,7 @@ export default async function ReservationDetailPage({
       service: true,
       staff: true,
       messageLogs: { orderBy: { sentAt: "desc" } },
+      treatmentRecord: { include: { staff: { select: { id: true, name: true } } } },
     },
   });
   if (!reservation) notFound();
@@ -84,6 +86,14 @@ export default async function ReservationDetailPage({
       select: { id: true, name: true },
     }),
   ]);
+
+  const karteRecord = reservation.treatmentRecord;
+
+  // 退職などで非表示になったスタッフも、カルテの担当として選べるようにする
+  const karteStaffOptions: KarteStaffOption[] = [...staffMembers];
+  if (karteRecord?.staff && !karteStaffOptions.some((s) => s.id === karteRecord.staff?.id)) {
+    karteStaffOptions.push({ id: karteRecord.staff.id, name: karteRecord.staff.name });
+  }
 
   return (
     <>
@@ -166,6 +176,34 @@ export default async function ReservationDetailPage({
               <StatusActions id={reservation.id} status={reservation.status} />
             </CardContent>
           </Card>
+
+          {reservation.status === "COMPLETED" && (
+            <ReservationKarteCard
+              reservationId={reservation.id}
+              customerId={reservation.customerId}
+              staffOptions={karteStaffOptions}
+              defaults={{
+                visitedAt: jstYmd(reservation.startAt),
+                serviceName: reservation.service?.name ?? "",
+                staffId: reservation.staffId ?? "",
+              }}
+              record={
+                karteRecord
+                  ? {
+                      id: karteRecord.id,
+                      visitedAt: jstYmd(karteRecord.visitedAt),
+                      visitedAtLabel: formatJstDate(karteRecord.visitedAt),
+                      serviceName: karteRecord.serviceName,
+                      staffId: karteRecord.staffId ?? "",
+                      staffName: karteRecord.staff?.name ?? "",
+                      content: karteRecord.content,
+                      materials: karteRecord.materials,
+                      nextNote: karteRecord.nextNote,
+                    }
+                  : null
+              }
+            />
+          )}
 
           {reservation.messageLogs.length > 0 && (
             <Card>

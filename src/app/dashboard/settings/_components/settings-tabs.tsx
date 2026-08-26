@@ -5,6 +5,7 @@ import type { BusinessHours } from "@/lib/constants";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StoreInfoForm } from "./store-info-form";
 import { BusinessHoursForm } from "./business-hours-form";
+import { HolidaysForm } from "./holidays-form";
 import { ServicesTab } from "./services-tab";
 import { StaffTab } from "./staff-tab";
 import { LineTab } from "./line-tab";
@@ -41,6 +42,13 @@ export type StaffRow = {
   active: boolean;
 };
 
+export type HolidayRow = {
+  id: string;
+  /** JST日付の00:00を表すISO文字列 */
+  date: string;
+  reason: string;
+};
+
 export type LineInfo = {
   configured: boolean;
   basicId: string;
@@ -51,6 +59,7 @@ export function SettingsTabs({
   initialTab,
   storeInfo,
   businessHours,
+  holidays,
   services,
   staffMembers,
   line,
@@ -58,6 +67,7 @@ export function SettingsTabs({
   initialTab: SettingsTabValue;
   storeInfo: StoreInfoData;
   businessHours: BusinessHours;
+  holidays: HolidayRow[];
   services: ServiceRow[];
   staffMembers: StaffRow[];
   line: LineInfo;
@@ -87,7 +97,10 @@ export function SettingsTabs({
         <StoreInfoForm storeInfo={storeInfo} />
       </TabsContent>
       <TabsContent value="hours">
-        <BusinessHoursForm initialHours={businessHours} />
+        <div className="flex flex-col gap-4">
+          <BusinessHoursForm initialHours={businessHours} />
+          <HolidaysForm holidays={holidays} />
+        </div>
       </TabsContent>
       <TabsContent value="services">
         <ServicesTab services={services} />

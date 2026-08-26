@@ -6,6 +6,7 @@ import {
   type BusinessHoursDay,
 } from "@/lib/constants";
 import { DAY_KEYS, addDays, fromJst } from "@/lib/jst";
+import { getHolidayYmds } from "@/lib/holidays";
 import { getAvailableSlots } from "@/lib/slots";
 
 function isBusinessHoursDay(v: unknown): v is BusinessHoursDay {
@@ -34,6 +35,7 @@ export function resolveBusinessHours(raw: unknown): BusinessHours {
 /**
  * 指定日（JST）の予約可能スロット（"HH:mm"）を計算する。
  * 空き枠API・予約作成時の再検証の両方で同一ロジックを使う。
+ * 臨時休業日（StoreHoliday）に該当する日は空配列を返す。
  */
 export async function computeDaySlots(params: {
   store: Store;
@@ -46,7 +48,7 @@ export async function computeDaySlots(params: {
   const dayStart = fromJst(dateYmd);
   const dayEnd = addDays(dayStart, 1);
 
-  const [reservations, staffCount] = await Promise.all([
+  const [reservations, staffCount, holidays] = await Promise.all([
     prisma.reservation.findMany({
       where: {
         storeId: store.id,
@@ -56,6 +58,8 @@ export async function computeDaySlots(params: {
       select: { startAt: true, endAt: true, staffId: true },
     }),
     prisma.staffMember.count({ where: { storeId: store.id, active: true } }),
+    // 対象日ぶんだけ取得（StoreHoliday.date はJST 00:00 固定なので完全一致で引ける）
+    getHolidayYmds(store.id, dayStart, dayStart),
   ]);
 
   return getAvailableSlots({
@@ -67,5 +71,6 @@ export async function computeDaySlots(params: {
     staffId,
     staffCount,
     now: params.now ?? new Date(),
+    holidays,
   });
 }

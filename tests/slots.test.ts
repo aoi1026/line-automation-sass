@@ -64,6 +64,22 @@ describe("getAvailableSlots: 営業時間と枠生成", () => {
   });
 });
 
+describe("getAvailableSlots: 臨時休業日", () => {
+  it("臨時休業日に該当する日は空配列", () => {
+    expect(getAvailableSlots(baseOpts({ holidays: [WED] }))).toEqual([]);
+  });
+
+  it("他の日が臨時休業日でも対象日の枠は影響を受けない", () => {
+    const slots = getAvailableSlots(baseOpts({ holidays: ["2026-08-27"] }));
+    expect(slots).toHaveLength(17);
+  });
+
+  it("holidays が空配列・未指定なら通常どおり枠が生成される", () => {
+    expect(getAvailableSlots(baseOpts({ holidays: [] }))).toHaveLength(17);
+    expect(getAvailableSlots(baseOpts())).toHaveLength(17);
+  });
+});
+
 describe("getAvailableSlots: 指名ありの重複除外", () => {
   it("指名スタッフの既存予約と重なる枠は除外される", () => {
     const slots = getAvailableSlots(
