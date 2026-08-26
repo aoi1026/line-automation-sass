@@ -41,6 +41,9 @@ model Store {
   campaigns          Campaign[]
   segments           Segment[]
   webhookEvents      WebhookEvent[]
+  treatmentRecords   TreatmentRecord[]
+  holidays           StoreHoliday[]
+  notifications      Notification[]
 }
 
 // ========== ログインユーザー（店舗スタッフ） ==========
@@ -96,8 +99,9 @@ model StaffMember {
   active    Boolean @default(true)
   sortOrder Int     @default(0)
 
-  store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  reservations Reservation[]
+  store            Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  reservations     Reservation[]
+  treatmentRecords TreatmentRecord[]
 
   @@index([storeId])
 }
@@ -133,6 +137,7 @@ model Customer {
   couponIssues    CouponIssue[]
   surveyRequests  SurveyRequest[]
   surveyResponses SurveyResponse[]
+  treatmentRecords TreatmentRecord[]
 
   @@unique([storeId, lineUserId])
   @@index([storeId, lastVisitAt])
@@ -201,8 +206,9 @@ model Reservation {
   service  Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
   staff    StaffMember? @relation(fields: [staffId], references: [id], onDelete: SetNull)
 
-  messageLogs    MessageLog[]
-  surveyRequests SurveyRequest[]
+  messageLogs     MessageLog[]
+  surveyRequests  SurveyRequest[]
+  treatmentRecord TreatmentRecord?
 
   @@index([storeId, startAt])
   @@index([storeId, status])
@@ -476,4 +482,74 @@ model WebhookEvent {
   store Store? @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
+}
+
+
+// ========== 電子カルテ（施術記録） ==========
+
+model TreatmentRecord {
+  id            String   @id @default(cuid())
+  storeId       String
+  customerId    String
+  reservationId String?  @unique
+  staffId       String?
+  serviceName   String   @default("")
+  /// 施術内容（カット・カラーの詳細など）
+  content       String   @default("") @db.Text
+  /// 使用した薬剤・カラー剤・パーマ液など
+  materials     String   @default("") @db.Text
+  /// 次回担当者への申し送り事項
+  nextNote      String   @default("") @db.Text
+  visitedAt     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer    Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reservation Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  staff       StaffMember? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, visitedAt])
+  @@index([customerId, visitedAt])
+}
+
+// ========== 臨時休業日 ==========
+
+model StoreHoliday {
+  id      String   @id @default(cuid())
+  storeId String
+  /// JST日付の 00:00（UTC保存）
+  date    DateTime
+  reason  String   @default("")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, date])
+  @@index([storeId, date])
+}
+
+// ========== 通知センター ==========
+
+enum NotificationType {
+  NEW_WEB_RESERVATION   // Web予約が入った
+  RESERVATION_CANCELLED // 顧客がキャンセルした
+  LOW_RATING_SURVEY     // 低評価のアンケート回答
+  CAMPAIGN_SENT         // キャンペーン配信完了
+  AUTOMATION_FAILED     // 自動配信の失敗
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  storeId   String
+  type      NotificationType
+  title     String
+  body      String           @default("")
+  /// クリック時の遷移先（例: /dashboard/reservations/xxx）
+  link      String           @default("")
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, readAt, createdAt])
 }

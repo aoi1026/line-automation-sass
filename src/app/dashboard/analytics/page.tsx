@@ -32,7 +32,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { MessageKindChart } from "./_components/message-kind-chart";
-import { PERIOD_LABELS, PeriodTabs, type PeriodDays } from "./_components/period-tabs";
+import { PeriodTabs } from "./_components/period-tabs";
+import { PERIOD_LABELS, type PeriodDays } from "./_components/period";
 import { VisitsChart, type VisitsChartPoint } from "./_components/visits-chart";
 import { VisitsTrendChart } from "./_components/visits-trend-chart";
 

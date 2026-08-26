@@ -61,3 +61,25 @@ Button(variant: default|secondary|outline|ghost|destructive|link, size: default|
 
 ## 環境変数
 `APP_URL`（リンク生成は `getAppUrl()`）, `DATABASE_URL`, `SESSION_SECRET`, `CRON_SECRET`, `AUTOMATION_INTERVAL_MS`
+
+---
+
+# Wave 2 追加コントラクト
+
+## 追加モデル（prisma/schema.prisma）
+- `TreatmentRecord` 電子カルテ: storeId, customerId, reservationId?(unique), staffId?, serviceName, content, materials, nextNote, visitedAt
+- `StoreHoliday` 臨時休業日: storeId, date(JST日付の00:00), reason。`@@unique([storeId, date])`
+- `Notification` 通知: storeId, type(NotificationType), title, body, link, readAt?, createdAt
+- `NotificationType`: NEW_WEB_RESERVATION | RESERVATION_CANCELLED | LOW_RATING_SURVEY | CAMPAIGN_SENT | AUTOMATION_FAILED
+
+## 追加共有ライブラリ（読み取り専用・変更禁止）
+- `@/lib/notifications`: `notify({storeId, type, title, body?, link?})` 通知作成（例外を投げない）、`countUnread(storeId)`、`NOTIFICATION_TYPE_LABELS`、`NOTIFICATION_TYPE_COLORS`
+- `@/lib/holidays`: `getHolidayYmds(storeId, from?, to?)` → JST "YYYY-MM-DD" の配列
+- `@/lib/rate-limit`: `rateLimit(key, limit, windowMs)` → `{ok, remaining, retryAfterSec}`、`getClientIp(req)`
+- `@/lib/csv`: `toCsv(headers, rows)`（UTF-8 BOM付き）、`csvResponse(filename, csv)`、`parseCsv(text)`
+- `@/lib/slots` の `getAvailableSlots` に `holidays?: string[]`（JST "YYYY-MM-DD"）オプションを追加済み。**予約枠を計算する箇所では必ず `getHolidayYmds` の結果を渡すこと。**
+- `qrcode` パッケージ導入済み（`import QRCode from "qrcode"` / `QRCode.toDataURL(url)`）
+
+## Wave 2 の追加ルール
+- 既存ファイルを変更する場合は、**担当として明示的に指定されたファイルのみ**。それ以外は新規作成。
+- 通知の発火は「顧客起点の出来事」に限る（Web予約受付・顧客によるキャンセル・低評価アンケート回答）。店舗スタッフ自身の操作では通知しない。

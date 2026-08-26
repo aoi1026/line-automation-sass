@@ -22,6 +22,8 @@ export type SlotOptions = {
   /** 現在時刻。これ＋leadTimeMin より前のスロットは除外 */
   now?: Date;
   leadTimeMin?: number;
+  /** 臨時休業日（JST "YYYY-MM-DD" の配列）。該当日は空を返す */
+  holidays?: string[];
 };
 
 function hmToMinutes(hm: string): number {
@@ -41,8 +43,11 @@ function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
 export function getAvailableSlots(opts: SlotOptions): string[] {
   const {
     businessHours, slotIntervalMin, durationMin, dateYmd,
-    reservations, staffId, staffCount, now, leadTimeMin = 30,
+    reservations, staffId, staffCount, now, leadTimeMin = 30, holidays,
   } = opts;
+
+  // 臨時休業日は予約不可
+  if (holidays && holidays.includes(dateYmd)) return [];
 
   const dayDate = fromJst(dateYmd, "12:00");
   const hours = businessHours[jstDayKey(dayDate)];
