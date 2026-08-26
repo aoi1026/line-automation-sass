@@ -3,7 +3,7 @@ import type {
   MessageTemplate, Reservation, Service, StaffMember, Store, Survey,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { pushText } from "@/lib/line/client";
+import { isLineConfigured, pushText } from "@/lib/line/client";
 import { DEFAULT_TEMPLATES } from "@/lib/constants";
 import {
   buildCustomerVars, buildReservationVars, renderTemplate, type TemplateVars,
@@ -47,14 +47,28 @@ export async function deliverMessage(params: {
     });
   }
 
-  const result = await pushText(store, customer.lineUserId, content);
-  return prisma.messageLog.create({
+  // 重複送信の目印となるログ行を「送信前」に作成する。
+  //
+  // 自動配信の送信済み判定は MessageLog を見ているため、送信してから記録すると
+  // LINE APIへの往復の間に別の実行が同じ判定を通過し、お客様に同じメッセージが
+  // 二重に届く。記録を先に確定させることでその窓を塞ぐ。
+  // （送信に失敗した場合は下で FAILED に更新する。万一プロセスが落ちても
+  //   「送ったのに未記録」より「未送信を送信済みと記録」の方が実害が小さい）
+  const channel = isLineConfigured(store) ? "LINE" : "DEMO";
+  const log = await prisma.messageLog.create({
     data: {
       storeId: store.id, customerId: customer.id, reservationId: reservationId ?? null,
-      campaignId: campaignId ?? null, kind, channel: result.channel,
-      status: result.ok ? "SENT" : "FAILED",
-      content, error: result.ok ? "" : result.error,
+      campaignId: campaignId ?? null, kind, channel,
+      status: "SENT", content, error: "",
     },
+  });
+
+  const result = await pushText(store, customer.lineUserId, content);
+  if (result.ok) return log;
+
+  return prisma.messageLog.update({
+    where: { id: log.id },
+    data: { status: "FAILED", error: result.error },
   });
 }
 

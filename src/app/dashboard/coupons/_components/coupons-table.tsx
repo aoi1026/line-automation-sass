@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Ticket } from "lucide-react";
+import { Pencil, Plus, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -31,16 +31,30 @@ export type CouponRow = {
   editInitial: CouponFormInitial;
 };
 
-/** クーポン一覧テーブル（行クリックで詳細へ、状態はインラインでPATCH） */
+/** クーポン一覧テーブル（行クリック・Enterキーで詳細へ、状態はインラインでPATCH） */
 export function CouponsTable({ rows }: { rows: CouponRow[] }) {
   const router = useRouter();
+
+  function open(id: string) {
+    router.push(`/dashboard/coupons/${id}`);
+  }
 
   if (rows.length === 0) {
     return (
       <EmptyState
-        icon={<Ticket />}
+        icon={<Ticket aria-hidden="true" />}
         title="クーポンがまだありません"
-        description="来店お礼や誕生日メッセージに添付できるクーポンを作成しましょう。"
+        description="来店お礼や誕生日メッセージに添付できるクーポンを作成しましょう。右上の「クーポンを作成」から登録できます。"
+        action={
+          <CouponFormDialog
+            trigger={
+              <Button type="button">
+                <Plus aria-hidden="true" />
+                クーポンを作成
+              </Button>
+            }
+          />
+        }
       />
     );
   }
@@ -65,10 +79,21 @@ export function CouponsTable({ rows }: { rows: CouponRow[] }) {
             {rows.map((row) => (
               <TableRow
                 key={row.id}
-                className="cursor-pointer"
-                onClick={() => router.push(`/dashboard/coupons/${row.id}`)}
+                tabIndex={0}
+                aria-label={`${row.title}の詳細を開く`}
+                className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50"
+                onClick={() => open(row.id)}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    open(row.id);
+                  }
+                }}
               >
-                <TableCell className="font-medium text-gray-900">{row.title}</TableCell>
+                <TableCell className="font-medium text-gray-900">
+                  {row.title}
+                </TableCell>
                 <TableCell className="whitespace-nowrap text-gray-700">
                   {row.discountLabel}
                 </TableCell>
@@ -85,20 +110,36 @@ export function CouponsTable({ rows }: { rows: CouponRow[] }) {
                   {row.usedCount}
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  <CouponActiveSwitch couponId={row.id} active={row.active} />
+                  <CouponActiveSwitch
+                    couponId={row.id}
+                    active={row.active}
+                    couponTitle={row.title}
+                  />
                 </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()} className="text-right">
+                <TableCell
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-right"
+                >
                   <div className="flex justify-end gap-1">
                     <CouponFormDialog
                       couponId={row.id}
                       initial={row.editInitial}
                       trigger={
-                        <Button type="button" variant="ghost" size="icon" aria-label="編集">
-                          <Pencil className="h-4 w-4" />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`「${row.title}」を編集`}
+                        >
+                          <Pencil className="h-4 w-4" aria-hidden="true" />
                         </Button>
                       }
                     />
-                    <DeleteCouponButton couponId={row.id} couponTitle={row.title} iconOnly />
+                    <DeleteCouponButton
+                      couponId={row.id}
+                      couponTitle={row.title}
+                      iconOnly
+                    />
                   </div>
                 </TableCell>
               </TableRow>

@@ -132,7 +132,7 @@ export default async function ReservationDetailPage({
                 <InfoRow label="顧客">
                   <Link
                     href={`/dashboard/customers/${reservation.customerId}`}
-                    className="font-medium text-brand hover:underline"
+                    className="rounded-sm font-medium text-brand-dark hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
                   >
                     {reservation.customer.name}
                   </Link>

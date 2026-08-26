@@ -14,18 +14,26 @@ import {
 
 export const metadata: Metadata = { title: "設定" };
 
-const TAB_VALUES: SettingsTabValue[] = ["store", "hours", "services", "staff", "line"];
+const TAB_VALUES: SettingsTabValue[] = [
+  "store",
+  "hours",
+  "services",
+  "staff",
+  "line",
+];
 
 function parseBusinessHours(raw: unknown): BusinessHours {
   const source = (raw ?? {}) as Record<string, unknown>;
   const hours = {} as BusinessHours;
   for (const day of DAY_KEYS) {
-    const value = source[day] as { open?: unknown; close?: unknown; closed?: unknown } | undefined;
+    const value = source[day] as
+      { open?: unknown; close?: unknown; closed?: unknown } | undefined;
     const fallback = DEFAULT_BUSINESS_HOURS[day];
     hours[day] = {
       open: typeof value?.open === "string" ? value.open : fallback.open,
       close: typeof value?.close === "string" ? value.close : fallback.close,
-      closed: typeof value?.closed === "boolean" ? value.closed : fallback.closed,
+      closed:
+        typeof value?.closed === "boolean" ? value.closed : fallback.closed,
     };
   }
   return hours;
@@ -38,7 +46,9 @@ export default async function SettingsPage({
 }) {
   const session = await requireSession();
   const { tab } = await searchParams;
-  const initialTab: SettingsTabValue = TAB_VALUES.includes(tab as SettingsTabValue)
+  const initialTab: SettingsTabValue = TAB_VALUES.includes(
+    tab as SettingsTabValue,
+  )
     ? (tab as SettingsTabValue)
     : "store";
 

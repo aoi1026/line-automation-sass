@@ -13,12 +13,7 @@ import { describeRules, parseRules } from "@/lib/segments";
 import { requireSession } from "@/lib/session";
 import { formatNumber } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import {
@@ -60,7 +55,11 @@ export default async function CampaignDetailPage({
       take: 200,
     }),
     prisma.messageLog.count({
-      where: { storeId: session.storeId, campaignId: campaign.id, status: "SKIPPED" },
+      where: {
+        storeId: session.storeId,
+        campaignId: campaign.id,
+        status: "SKIPPED",
+      },
     }),
   ]);
 
@@ -81,21 +80,30 @@ export default async function CampaignDetailPage({
     { label: "クーポン", value: campaign.coupon?.title ?? "なし" },
   ];
   if (campaign.status === "SCHEDULED" && campaign.scheduledAt) {
-    metaRows.push({ label: "配信予定", value: formatJstDateTime(campaign.scheduledAt) });
+    metaRows.push({
+      label: "配信予定",
+      value: formatJstDateTime(campaign.scheduledAt),
+    });
   }
   if (campaign.sentAt) {
-    metaRows.push({ label: "配信日時", value: formatJstDateTime(campaign.sentAt) });
+    metaRows.push({
+      label: "配信日時",
+      value: formatJstDateTime(campaign.sentAt),
+    });
   }
-  metaRows.push({ label: "作成日", value: formatJstDateTime(campaign.createdAt) });
+  metaRows.push({
+    label: "作成日",
+    value: formatJstDateTime(campaign.createdAt),
+  });
 
   return (
     <>
       <Link
         href="/dashboard/campaigns"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+        className="mb-4 inline-flex items-center gap-1 rounded-md text-sm text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
       >
-        <ArrowLeft className="h-4 w-4" />
-        キャンペーン一覧
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        キャンペーン一覧へ戻る
       </Link>
 
       <PageHeader
@@ -106,7 +114,11 @@ export default async function CampaignDetailPage({
               {CAMPAIGN_STATUS_LABELS[campaign.status]}
             </Badge>
             <CampaignActions
-              campaign={{ id: campaign.id, title: campaign.title, status: campaign.status }}
+              campaign={{
+                id: campaign.id,
+                title: campaign.title,
+                status: campaign.status,
+              }}
               redirectAfterDelete
             />
           </div>
@@ -118,10 +130,14 @@ export default async function CampaignDetailPage({
           <StatCard
             label="対象者数"
             value={formatNumber(campaign.targetCount)}
-            icon={<Users />}
+            icon={<Users aria-hidden="true" />}
           />
           <StatCard label="送信数" value={formatNumber(campaign.sentCount)} />
-          <StatCard label="スキップ" value={formatNumber(skippedCount)} sub="LINE未連携など" />
+          <StatCard
+            label="スキップ"
+            value={formatNumber(skippedCount)}
+            sub="LINE未連携など"
+          />
         </div>
       )}
 
@@ -132,13 +148,24 @@ export default async function CampaignDetailPage({
             <CardTitle>本文プレビュー</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-xl bg-[#8CABD8] p-4 sm:p-6">
-              <div className="max-w-md rounded-2xl rounded-tl-md bg-white px-4 py-3 text-sm leading-relaxed text-gray-900 shadow whitespace-pre-wrap break-words">
-                {campaign.content}
+            {/* LINEのトーク画面を模した表示（背景はLINEの標準壁紙に近い色） */}
+            <div className="rounded-xl bg-[#8cabd8] p-4 sm:p-6">
+              <div className="flex items-end gap-1.5">
+                <div className="max-w-md whitespace-pre-wrap break-words rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-sm leading-relaxed text-gray-900 shadow">
+                  {campaign.content}
+                </div>
+                <span
+                  className="shrink-0 text-[10px] text-white/80"
+                  aria-hidden="true"
+                >
+                  14:30
+                </span>
               </div>
             </div>
-            <p className="mt-2 text-xs text-gray-400">
-              {"{お客様名} などのプレースホルダーは、送信時にお客様ごとの内容に置き換えられます。"}
+            <p className="mt-2 text-xs text-gray-500">
+              {
+                "{お客様名} などのプレースホルダー（差し込み項目）は、送信時にお客様ごとの内容に置き換えられます。"
+              }
             </p>
           </CardContent>
         </Card>
@@ -152,7 +179,9 @@ export default async function CampaignDetailPage({
             <dl className="space-y-3">
               {metaRows.map((row) => (
                 <div key={row.label}>
-                  <dt className="text-xs font-medium text-gray-500">{row.label}</dt>
+                  <dt className="text-xs font-medium text-gray-500">
+                    {row.label}
+                  </dt>
                   <dd className="mt-0.5 text-sm text-gray-900">{row.value}</dd>
                 </div>
               ))}
@@ -169,7 +198,9 @@ export default async function CampaignDetailPage({
           </CardHeader>
           <CardContent className="p-0">
             {logs.length === 0 ? (
-              <p className="px-5 pb-5 text-sm text-gray-500">配信ログはまだありません。</p>
+              <p className="px-5 pb-5 text-sm text-gray-500">
+                配信ログはまだありません。配信が完了すると、お客様ごとの送信結果がここに表示されます。
+              </p>
             ) : (
               <Table>
                 <TableHeader>
@@ -190,7 +221,9 @@ export default async function CampaignDetailPage({
                           <Badge className={MESSAGE_STATUS_COLORS[log.status]}>
                             {MESSAGE_STATUS_LABELS[log.status]}
                           </Badge>
-                          {log.channel === "DEMO" && <Badge variant="outline">デモ</Badge>}
+                          {log.channel === "DEMO" && (
+                            <Badge variant="outline">デモ</Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-gray-600">

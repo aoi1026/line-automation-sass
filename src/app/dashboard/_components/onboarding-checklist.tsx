@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, BookOpen, CheckCircle2, Circle, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -127,10 +127,15 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
               {step.done ? (
                 <span className="shrink-0 text-xs font-medium text-gray-400">完了</span>
               ) : (
-                <Link href={step.href} className="shrink-0">
-                  <Button size="sm" variant="outline">
-                    {step.actionLabel}
-                  </Button>
+                <Link
+                  href={step.href}
+                  aria-label={`${step.title}（${step.actionLabel}）`}
+                  className={cn(
+                    buttonVariants({ size: "sm", variant: "outline" }),
+                    "shrink-0"
+                  )}
+                >
+                  {step.actionLabel}
                 </Link>
               )}
             </li>

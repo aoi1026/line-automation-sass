@@ -89,17 +89,22 @@ export function SegmentFormDialog({
     setNameError(null);
     setSaving(true);
     try {
-      const res = await fetch(segment ? `/api/segments/${segment.id}` : "/api/segments", {
-        method: segment ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), rules }),
-      });
+      const res = await fetch(
+        segment ? `/api/segments/${segment.id}` : "/api/segments",
+        {
+          method: segment ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name.trim(), rules }),
+        },
+      );
       if (!res.ok) {
         const data: { error?: string } = await res.json().catch(() => ({}));
         toast.error(data.error ?? "保存に失敗しました");
         return;
       }
-      toast.success(segment ? "セグメントを保存しました" : "セグメントを作成しました");
+      toast.success(
+        segment ? "セグメントを保存しました" : "セグメントを作成しました",
+      );
       onOpenChange(false);
       router.refresh();
     } finally {
@@ -111,7 +116,9 @@ export function SegmentFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>{segment ? "セグメントを編集" : "セグメントを作成"}</DialogTitle>
+          <DialogTitle>
+            {segment ? "セグメントを編集" : "セグメントを作成"}
+          </DialogTitle>
           <DialogDescription>
             条件はすべて任意です。指定した条件をすべて満たすお客様が対象になります。
           </DialogDescription>
@@ -137,11 +144,17 @@ export function SegmentFormDialog({
               aria-required="true"
               aria-invalid={nameError ? true : undefined}
               aria-describedby={
-                nameError ? "segment-name-error segment-name-help" : "segment-name-help"
+                nameError
+                  ? "segment-name-error segment-name-help"
+                  : "segment-name-help"
               }
             />
             {nameError && (
-              <p id="segment-name-error" role="alert" className="text-xs text-red-600">
+              <p
+                id="segment-name-error"
+                role="alert"
+                className="text-xs text-red-600"
+              >
                 {nameError}
               </p>
             )}
@@ -150,7 +163,12 @@ export function SegmentFormDialog({
             </p>
           </div>
 
-          <RuleBuilder value={rules} onChange={setRules} tags={tags} idPrefix="segment-rule" />
+          <RuleBuilder
+            value={rules}
+            onChange={setRules}
+            tags={tags}
+            idPrefix="segment-rule"
+          />
 
           <div
             role="status"
@@ -166,16 +184,25 @@ export function SegmentFormDialog({
             ) : count !== null ? (
               <span className="text-gray-700">
                 対象:{" "}
-                <span className="font-bold text-brand-dark">{formatNumber(count)}</span> 人
+                <span className="font-bold text-brand-dark">
+                  {formatNumber(count)}
+                </span>{" "}
+                人
               </span>
             ) : (
-              <span className="text-gray-500">条件を入力すると対象人数が表示されます</span>
+              <span className="text-gray-500">
+                条件を入力すると対象人数が表示されます
+              </span>
             )}
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             キャンセル
           </Button>
           <Button onClick={handleSave} disabled={saving}>

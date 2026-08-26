@@ -6,7 +6,13 @@ import { toast } from "sonner";
 import { Pencil, Plus, Scissors, Trash2 } from "lucide-react";
 import { formatYen } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -68,7 +74,8 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const set = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
+  const set = (patch: Partial<FormState>) =>
+    setForm((prev) => ({ ...prev, ...patch }));
 
   const openAdd = () => {
     setEditing(null);
@@ -86,7 +93,10 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
       description: service.description,
       durationMin: String(service.durationMin),
       price: String(service.price),
-      repeatIntervalDays: service.repeatIntervalDays == null ? "" : String(service.repeatIntervalDays),
+      repeatIntervalDays:
+        service.repeatIntervalDays == null
+          ? ""
+          : String(service.repeatIntervalDays),
       sortOrder: String(service.sortOrder),
     });
     setDialogOpen(true);
@@ -142,11 +152,15 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
             body,
           });
       if (res.ok) {
-        toast.success(editing ? "メニューを更新しました" : "メニューを追加しました");
+        toast.success(
+          editing ? "メニューを更新しました" : "メニューを追加しました",
+        );
         setDialogOpen(false);
         router.refresh();
       } else {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         toast.error(data?.error ?? "保存に失敗しました");
       }
     } finally {
@@ -161,27 +175,35 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
       body: JSON.stringify({ active }),
     });
     if (res.ok) {
-      toast.success(active ? "メニューを有効にしました" : "メニューを無効にしました");
+      toast.success(
+        active ? "メニューを有効にしました" : "メニューを無効にしました",
+      );
       router.refresh();
     } else {
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       toast.error(data?.error ?? "更新に失敗しました");
     }
   };
 
   const remove = async (service: ServiceRow) => {
     const ok = window.confirm(
-      `「${service.name}」を削除します。\nWeb予約ページのメニュー一覧から表示されなくなり、お客様は選べなくなります。\n過去の予約履歴と売上はそのまま残ります。`
+      `「${service.name}」を削除します。\nWeb予約ページのメニュー一覧から表示されなくなり、お客様は選べなくなります。\n過去の予約履歴と売上はそのまま残ります。`,
     );
     if (!ok) return;
     setDeletingId(service.id);
     try {
-      const res = await fetch(`/api/services/${service.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/services/${service.id}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
         toast.success("メニューを削除しました");
         router.refresh();
       } else {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         toast.error(data?.error ?? "削除に失敗しました");
       }
     } finally {
@@ -234,9 +256,13 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
               {services.map((service) => (
                 <TableRow key={service.id}>
                   <TableCell>
-                    <div className="font-medium text-gray-900">{service.name}</div>
+                    <div className="font-medium text-gray-900">
+                      {service.name}
+                    </div>
                     {service.category && (
-                      <div className="mt-0.5 text-xs text-gray-500">{service.category}</div>
+                      <div className="mt-0.5 text-xs text-gray-500">
+                        {service.category}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-gray-700">
@@ -247,7 +273,9 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {service.repeatIntervalDays != null ? (
-                      <span className="text-gray-700">{service.repeatIntervalDays}日</span>
+                      <span className="text-gray-700">
+                        {service.repeatIntervalDays}日
+                      </span>
                     ) : (
                       <span className="text-gray-400">標準</span>
                     )}
@@ -255,7 +283,9 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
                   <TableCell>
                     <Switch
                       checked={service.active}
-                      onCheckedChange={(checked) => toggleActive(service, checked)}
+                      onCheckedChange={(checked) =>
+                        toggleActive(service, checked)
+                      }
                       aria-label={`${service.name}をWeb予約ページに表示する`}
                     />
                   </TableCell>
@@ -294,7 +324,9 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? "メニューを編集" : "メニューを追加"}</DialogTitle>
+            <DialogTitle>
+              {editing ? "メニューを編集" : "メニューを追加"}
+            </DialogTitle>
             <DialogDescription>
               {editing
                 ? "メニューの内容を変更できます。"
@@ -323,7 +355,11 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
                 aria-describedby={nameError ? "service-name-error" : undefined}
               />
               {nameError && (
-                <p id="service-name-error" role="alert" className="mt-1 text-xs text-red-600">
+                <p
+                  id="service-name-error"
+                  role="alert"
+                  className="mt-1 text-xs text-red-600"
+                >
                   {nameError}
                 </p>
               )}
@@ -337,7 +373,10 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
                 placeholder="例: カラー"
                 aria-describedby="service-category-help"
               />
-              <p id="service-category-help" className="mt-1 text-xs text-gray-500">
+              <p
+                id="service-category-help"
+                className="mt-1 text-xs text-gray-500"
+              >
                 Web予約ページでメニューをグループごとにまとめて表示します。
               </p>
             </div>
@@ -351,15 +390,24 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
                 placeholder="メニューの内容やおすすめポイントをご記入ください。"
                 aria-describedby="service-description-help"
               />
-              <p id="service-description-help" className="mt-1 text-xs text-gray-500">
+              <p
+                id="service-description-help"
+                className="mt-1 text-xs text-gray-500"
+              >
                 Web予約ページでメニュー名の下に表示されます。
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="service-duration">所要時間</Label>
-                <Select value={form.durationMin} onValueChange={(v) => set({ durationMin: v })}>
-                  <SelectTrigger id="service-duration" aria-describedby="service-duration-help">
+                <Select
+                  value={form.durationMin}
+                  onValueChange={(v) => set({ durationMin: v })}
+                >
+                  <SelectTrigger
+                    id="service-duration"
+                    aria-describedby="service-duration-help"
+                  >
                     <SelectValue placeholder="選択してください" />
                   </SelectTrigger>
                   <SelectContent>
@@ -370,7 +418,10 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
                     ))}
                   </SelectContent>
                 </Select>
-                <p id="service-duration-help" className="mt-1 text-xs text-gray-500">
+                <p
+                  id="service-duration-help"
+                  className="mt-1 text-xs text-gray-500"
+                >
                   この時間だけ予約枠を確保します。
                 </p>
               </div>
@@ -386,7 +437,10 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
                   placeholder="例: 8800"
                   aria-describedby="service-price-help"
                 />
-                <p id="service-price-help" className="mt-1 text-xs text-gray-500">
+                <p
+                  id="service-price-help"
+                  className="mt-1 text-xs text-gray-500"
+                >
                   税込価格を半角数字でご入力ください。
                 </p>
               </div>
@@ -405,7 +459,10 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
                   placeholder="未設定なら店舗標準"
                   aria-describedby="service-repeat-help"
                 />
-                <p id="service-repeat-help" className="mt-1 text-xs text-gray-500">
+                <p
+                  id="service-repeat-help"
+                  className="mt-1 text-xs text-gray-500"
+                >
                   再来店リマインドを送るまでの日数です。
                 </p>
               </div>
@@ -420,14 +477,21 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
                   onChange={(e) => set({ sortOrder: e.target.value })}
                   aria-describedby="service-sort-help"
                 />
-                <p id="service-sort-help" className="mt-1 text-xs text-gray-500">
+                <p
+                  id="service-sort-help"
+                  className="mt-1 text-xs text-gray-500"
+                >
                   数字が小さいほど上に表示されます。
                 </p>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              disabled={saving}
+            >
               キャンセル
             </Button>
             <Button onClick={submit} disabled={saving}>

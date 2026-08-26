@@ -107,10 +107,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     case "complete": {
       if (!isActive) return invalidTransition();
       const updated = await prisma.$transaction(async (tx) => {
-        const r = await tx.reservation.update({
-          where: { id: reservation.id },
+        // 同時に2回押されても二重加算しないよう、ステータス条件付きで確保する。
+        // 先に遷移させた側だけが更新に成功し、もう一方は 0件となって中断する。
+        const claimed = await tx.reservation.updateMany({
+          where: { id: reservation.id, status: { in: ["PENDING", "CONFIRMED"] } },
           data: { status: "COMPLETED", completedAt: new Date() },
         });
+        if (claimed.count === 0) return null;
+        const r = await tx.reservation.findUniqueOrThrow({ where: { id: reservation.id } });
         const customer = await tx.customer.findFirst({
           where: { id: reservation.customerId, storeId: session.storeId },
         });
@@ -130,6 +134,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         }
         return r;
       });
+      if (!updated) return invalidTransition();
       return NextResponse.json(updated);
     }
 
@@ -137,10 +142,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     case "uncomplete": {
       if (reservation.status !== "COMPLETED") return invalidTransition();
       const updated = await prisma.$transaction(async (tx) => {
-        const r = await tx.reservation.update({
-          where: { id: reservation.id },
+        const claimed = await tx.reservation.updateMany({
+          where: { id: reservation.id, status: "COMPLETED" },
           data: { status: "CONFIRMED", completedAt: null },
         });
+        if (claimed.count === 0) return null;
+        const r = await tx.reservation.findUniqueOrThrow({ where: { id: reservation.id } });
         const customer = await tx.customer.findFirst({
           where: { id: reservation.customerId, storeId: session.storeId },
         });
@@ -168,6 +175,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         }
         return r;
       });
+      if (!updated) return invalidTransition();
       return NextResponse.json(updated);
     }
 
@@ -241,17 +249,56 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         if (conflict) return jsonError(conflictMessage(conflict));
       }
 
-      const updated = await prisma.reservation.update({
-        where: { id: reservation.id },
-        data: {
-          customerId: data.customerId,
-          serviceId: data.serviceId ?? null,
-          staffId: data.staffId ?? null,
-          startAt,
-          endAt,
-          price: data.price,
-          note: data.note ?? "",
-        },
+      // 来店済み予約の編集では、顧客の来店統計も整合させる必要がある。
+      // 料金や顧客の付け替えを行っても統計が古いままだと、累計利用額・
+      // 来店回数・最終来店日が実態とズレてしまうため。
+      const updated = await prisma.$transaction(async (tx) => {
+        const r = await tx.reservation.update({
+          where: { id: reservation.id },
+          data: {
+            customerId: data.customerId,
+            serviceId: data.serviceId ?? null,
+            staffId: data.staffId ?? null,
+            startAt,
+            endAt,
+            price: data.price,
+            note: data.note ?? "",
+          },
+        });
+
+        if (reservation.status === "COMPLETED") {
+          const customerChanged = data.customerId !== reservation.customerId;
+
+          // 顧客ごとの来店済み予約から統計を数え直す（差分計算より確実）
+          const recalc = async (customerId: string) => {
+            const [agg, count] = await Promise.all([
+              tx.reservation.aggregate({
+                where: { customerId, storeId: session.storeId, status: "COMPLETED" },
+                _sum: { price: true },
+                _max: { startAt: true },
+                _min: { startAt: true },
+              }),
+              tx.reservation.count({
+                where: { customerId, storeId: session.storeId, status: "COMPLETED" },
+              }),
+            ]);
+            await tx.customer.updateMany({
+              where: { id: customerId, storeId: session.storeId },
+              data: {
+                visitCount: count,
+                totalSpent: agg._sum.price ?? 0,
+                lastVisitAt: agg._max.startAt,
+                firstVisitAt: agg._min.startAt,
+              },
+            });
+          };
+
+          await recalc(data.customerId);
+          // 別の顧客へ付け替えた場合は、元の顧客の統計も数え直す
+          if (customerChanged) await recalc(reservation.customerId);
+        }
+
+        return r;
       });
 
       // 日時が実際に変わった確定済み予約のときだけ日時変更通知を送る

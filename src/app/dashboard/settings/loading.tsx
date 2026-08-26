@@ -1,4 +1,9 @@
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /** タブ列の見出し幅（店舗情報・営業時間・メニュー・スタッフ・LINE連携） */
@@ -22,7 +27,10 @@ export default function SettingsLoading() {
       <div className="overflow-x-auto pb-1">
         <div className="inline-flex h-10 items-center gap-1 rounded-lg bg-gray-100 p-1">
           {TAB_WIDTHS.map((width, i) => (
-            <Skeleton key={i} className={`h-8 rounded-md bg-gray-300/70 ${width}`} />
+            <Skeleton
+              key={i}
+              className={`h-8 rounded-md bg-gray-300/70 ${width}`}
+            />
           ))}
         </div>
       </div>

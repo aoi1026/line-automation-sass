@@ -64,7 +64,10 @@ export function SegmentsClient({
       const res = await fetch("/api/segments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: `${item.name}のコピー`, rules: item.rules }),
+        body: JSON.stringify({
+          name: `${item.name}のコピー`,
+          rules: item.rules,
+        }),
       });
       if (!res.ok) {
         const data: { error?: string } = await res.json().catch(() => ({}));
@@ -119,12 +122,16 @@ export function SegmentsClient({
               <TableBody>
                 {segments.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium text-gray-900">{item.name}</TableCell>
+                    <TableCell className="font-medium text-gray-900">
+                      {item.name}
+                    </TableCell>
                     <TableCell className="max-w-[24rem] text-gray-600">
                       {item.description}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{formatNumber(item.targetCount)}人</Badge>
+                      <Badge variant="secondary">
+                        {formatNumber(item.targetCount)}人
+                      </Badge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-gray-500">
                       {item.updatedAtLabel}
