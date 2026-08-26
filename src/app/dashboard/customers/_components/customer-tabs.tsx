@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { MessageChannel, MessageKind, MessageStatus, ReservationStatus } from "@prisma/client";
 import { CalendarClock, MessageSquareText } from "lucide-react";
 import {
@@ -10,8 +11,9 @@ import {
   RESERVATION_STATUS_COLORS,
   RESERVATION_STATUS_LABELS,
 } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -41,6 +43,9 @@ export type MessageLogRow = {
   channel: MessageChannel;
 };
 
+const LINK_FOCUS =
+  "rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+
 /** 顧客詳細の予約履歴／送信履歴タブ */
 export function CustomerTabs({
   reservations,
@@ -51,14 +56,40 @@ export function CustomerTabs({
 }) {
   return (
     <Tabs defaultValue="reservations">
-      <TabsList>
-        <TabsTrigger value="reservations">予約履歴</TabsTrigger>
-        <TabsTrigger value="messages">送信履歴</TabsTrigger>
+      <TabsList aria-label="履歴の種類">
+        <TabsTrigger value="reservations">
+          予約履歴
+          {reservations.length > 0 && (
+            <span className="ml-1.5 text-xs font-normal tabular-nums text-gray-400">
+              {formatNumber(reservations.length)}
+            </span>
+          )}
+        </TabsTrigger>
+        <TabsTrigger value="messages">
+          送信履歴
+          {messageLogs.length > 0 && (
+            <span className="ml-1.5 text-xs font-normal tabular-nums text-gray-400">
+              {formatNumber(messageLogs.length)}
+            </span>
+          )}
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="reservations">
         {reservations.length === 0 ? (
-          <EmptyState icon={<CalendarClock />} title="予約履歴がありません" />
+          <EmptyState
+            icon={<CalendarClock aria-hidden="true" />}
+            title="予約履歴はまだありません"
+            description="このお客様の予約を登録すると、来店の記録がここに残ります。"
+            action={
+              <Link
+                href="/dashboard/reservations"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                予約を登録
+              </Link>
+            }
+          />
         ) : (
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
             <Table>
@@ -74,19 +105,25 @@ export function CustomerTabs({
               <TableBody>
                 {reservations.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="whitespace-nowrap">{r.startAtLabel}</TableCell>
-                    <TableCell className="whitespace-nowrap">{r.serviceName}</TableCell>
-                    <TableCell className="whitespace-nowrap">{r.staffName}</TableCell>
-                    <TableCell className="whitespace-nowrap text-right">{r.priceLabel}</TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap",
-                          RESERVATION_STATUS_COLORS[r.status]
-                        )}
+                    <TableCell className="whitespace-nowrap">
+                      <Link
+                        href={`/dashboard/reservations/${r.id}`}
+                        className={`font-medium text-gray-900 hover:text-brand-dark hover:underline ${LINK_FOCUS}`}
                       >
+                        {r.startAtLabel}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-gray-600">
+                      {r.serviceName}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-gray-600">{r.staffName}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right tabular-nums">
+                      {r.priceLabel}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={RESERVATION_STATUS_COLORS[r.status]}>
                         {RESERVATION_STATUS_LABELS[r.status]}
-                      </span>
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -98,7 +135,11 @@ export function CustomerTabs({
 
       <TabsContent value="messages">
         {messageLogs.length === 0 ? (
-          <EmptyState icon={<MessageSquareText />} title="送信履歴がありません" />
+          <EmptyState
+            icon={<MessageSquareText aria-hidden="true" />}
+            title="送信履歴はまだありません"
+            description="LINEでメッセージをお送りすると、送信の記録がここに残ります。"
+          />
         ) : (
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
             <Table>
@@ -114,24 +155,23 @@ export function CustomerTabs({
               <TableBody>
                 {messageLogs.map((m) => (
                   <TableRow key={m.id}>
-                    <TableCell className="whitespace-nowrap">{m.sentAtLabel}</TableCell>
-                    <TableCell className="whitespace-nowrap">{MESSAGE_KIND_LABELS[m.kind]}</TableCell>
-                    <TableCell className="max-w-xs truncate" title={m.content}>
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      {m.sentAtLabel}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {MESSAGE_KIND_LABELS[m.kind]}
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate text-gray-600" title={m.content}>
                       {m.content}
                     </TableCell>
                     <TableCell>
-                      <span
-                        className={cn(
-                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap",
-                          MESSAGE_STATUS_COLORS[m.status]
-                        )}
-                      >
+                      <Badge className={MESSAGE_STATUS_COLORS[m.status]}>
                         {MESSAGE_STATUS_LABELS[m.status]}
-                      </span>
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {m.channel === "DEMO" ? (
-                        <Badge variant="secondary">デモ</Badge>
+                        <Badge variant="secondary">{MESSAGE_CHANNEL_LABELS.DEMO}</Badge>
                       ) : (
                         <Badge variant="outline">{MESSAGE_CHANNEL_LABELS[m.channel]}</Badge>
                       )}

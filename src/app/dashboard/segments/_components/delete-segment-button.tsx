@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +13,7 @@ export function DeleteSegmentButton({ id, name }: { id: string; name: string }) 
 
   async function handleDelete() {
     const ok = window.confirm(
-      `セグメント「${name}」を削除します。\nこのセグメントを対象にしているキャンペーンは対象の設定が解除され、全顧客が対象になります。よろしいですか？`
+      `セグメント「${name}」を削除します。\nこのセグメントを配信対象にしている未送信のキャンペーンは対象の設定が解除され、全顧客が対象になります。\nお客様の情報は削除されません。`
     );
     if (!ok) return;
     setBusy(true);
@@ -34,11 +35,13 @@ export function DeleteSegmentButton({ id, name }: { id: string; name: string }) 
     <Button
       variant="ghost"
       size="sm"
-      className="text-red-600 hover:bg-red-50 hover:text-red-700"
+      className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
       onClick={handleDelete}
       disabled={busy}
+      aria-label={`セグメント「${name}」を削除`}
     >
-      削除
+      <Trash2 aria-hidden="true" />
+      {busy ? "削除中…" : "削除"}
     </Button>
   );
 }

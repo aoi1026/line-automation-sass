@@ -70,6 +70,7 @@ export function NewReservationDialog({
 
   const timeOptions = React.useMemo(() => buildTimeOptions(slotIntervalMin), [slotIntervalMin]);
   const selectedService = services.find((s) => s.id === serviceId) ?? null;
+  const selectedCustomer = customers.find((c) => c.id === customerId) ?? null;
   const durationMin = selectedService?.durationMin ?? 60;
   const endTime = minToHm(Math.min(24 * 60 - 1, hmToMin(time) + durationMin));
 
@@ -162,8 +163,9 @@ export function NewReservationDialog({
                     key={c.id}
                     type="button"
                     onClick={() => setCustomerId(c.id)}
+                    aria-pressed={customerId === c.id}
                     className={cn(
-                      "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50",
+                      "flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50",
                       customerId === c.id && "bg-brand/10 font-medium text-brand-dark"
                     )}
                   >
@@ -173,13 +175,18 @@ export function NewReservationDialog({
                 ))
               )}
             </div>
+            <p className="text-xs text-gray-500" aria-live="polite">
+              {selectedCustomer
+                ? `選択中: ${selectedCustomer.name} 様`
+                : "一覧からお客様を選んでください。"}
+            </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label>メニュー</Label>
+              <Label htmlFor="calendar-service">メニュー</Label>
               <Select value={serviceId} onValueChange={handleServiceChange}>
-                <SelectTrigger aria-label="メニューを選択">
+                <SelectTrigger id="calendar-service">
                   <SelectValue placeholder="メニューを選択" />
                 </SelectTrigger>
                 <SelectContent>
@@ -194,9 +201,9 @@ export function NewReservationDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label>担当</Label>
+              <Label htmlFor="calendar-staff-select">担当</Label>
               <Select value={staffId} onValueChange={setStaffId}>
-                <SelectTrigger aria-label="担当を選択">
+                <SelectTrigger id="calendar-staff-select">
                   <SelectValue placeholder="担当を選択" />
                 </SelectTrigger>
                 <SelectContent>
@@ -221,9 +228,9 @@ export function NewReservationDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label>時刻</Label>
+              <Label htmlFor="calendar-time">時刻</Label>
               <Select value={time} onValueChange={setTime}>
-                <SelectTrigger aria-label="時刻を選択">
+                <SelectTrigger id="calendar-time">
                   <SelectValue placeholder="時刻を選択" />
                 </SelectTrigger>
                 <SelectContent>
@@ -266,7 +273,7 @@ export function NewReservationDialog({
             閉じる
           </Button>
           <Button disabled={submitting} onClick={() => void handleSubmit()}>
-            予約を作成
+            {submitting ? "作成中…" : "予約を作成"}
           </Button>
         </DialogFooter>
       </DialogContent>

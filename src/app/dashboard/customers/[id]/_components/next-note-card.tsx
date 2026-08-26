@@ -20,9 +20,9 @@ export function NextNoteCard({
   return (
     <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
       <div className="flex items-start gap-3">
-        <StickyNote className="mt-0.5 size-5 shrink-0 text-amber-600" />
+        <StickyNote aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-amber-600" />
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-amber-900">前回の申し送り</p>
+          <h2 className="text-sm font-semibold text-amber-900">前回の申し送り</h2>
           <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-amber-900">
             {note}
           </p>

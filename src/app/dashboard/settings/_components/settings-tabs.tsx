@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { BusinessHours } from "@/lib/constants";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { QrCard } from "./qr-card";
 import { StoreInfoForm } from "./store-info-form";
 import { BusinessHoursForm } from "./business-hours-form";
 import { HolidaysForm } from "./holidays-form";
@@ -84,17 +85,31 @@ export function SettingsTabs({
 
   return (
     <Tabs value={tab} onValueChange={handleChange}>
-      <div className="overflow-x-auto pb-1">
-        <TabsList>
-          <TabsTrigger value="store">店舗情報</TabsTrigger>
-          <TabsTrigger value="hours">営業時間</TabsTrigger>
-          <TabsTrigger value="services">メニュー</TabsTrigger>
-          <TabsTrigger value="staff">スタッフ</TabsTrigger>
-          <TabsTrigger value="line">LINE連携</TabsTrigger>
+      {/* 幅の狭い画面ではタブが折り返さず横スクロールする（ページ全体は横スクロールしない） */}
+      <div className="-mx-1 overflow-x-auto px-1 pb-1">
+        <TabsList aria-label="設定のカテゴリ" className="w-max min-w-full justify-start">
+          <TabsTrigger value="store" className="h-8 px-3">
+            店舗情報
+          </TabsTrigger>
+          <TabsTrigger value="hours" className="h-8 px-3">
+            営業時間
+          </TabsTrigger>
+          <TabsTrigger value="services" className="h-8 px-3">
+            メニュー
+          </TabsTrigger>
+          <TabsTrigger value="staff" className="h-8 px-3">
+            スタッフ
+          </TabsTrigger>
+          <TabsTrigger value="line" className="h-8 px-3">
+            LINE連携
+          </TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="store">
-        <StoreInfoForm storeInfo={storeInfo} />
+        <div className="flex flex-col gap-4">
+          <StoreInfoForm storeInfo={storeInfo} />
+          <QrCard />
+        </div>
       </TabsContent>
       <TabsContent value="hours">
         <div className="flex flex-col gap-4">

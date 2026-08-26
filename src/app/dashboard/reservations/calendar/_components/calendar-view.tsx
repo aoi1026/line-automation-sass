@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addDays, fromJst, jstParts, jstYmd } from "@/lib/jst";
 import { RESERVATION_STATUS_LABELS } from "@/lib/constants";
+import { formatNumber } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -165,7 +167,7 @@ export function CalendarView({
             value={data.view}
             onValueChange={(v) => navigate({ view: v === "week" ? "week" : "day" })}
           >
-            <TabsList>
+            <TabsList aria-label="表示単位の切り替え">
               <TabsTrigger value="day">日表示</TabsTrigger>
               <TabsTrigger value="week">週表示</TabsTrigger>
             </TabsList>
@@ -174,43 +176,51 @@ export function CalendarView({
         <Button
           variant="outline"
           size="icon"
-          aria-label={view === "week" ? "前の週" : "前の日"}
+          aria-label={view === "week" ? "前の週へ" : "前の日へ"}
           onClick={() => navigate({ date: shiftYmd(data.date, -stepDays) })}
         >
-          <ChevronLeft />
+          <ChevronLeft aria-hidden="true" />
         </Button>
-        <Input
-          type="date"
-          value={data.date}
-          onChange={(e) => {
-            if (e.target.value) navigate({ date: e.target.value });
-          }}
-          className="w-40"
-          aria-label="日付を選択"
-        />
+        <div className="w-36 shrink-0 sm:w-40">
+          <Label htmlFor="calendar-date" className="sr-only">
+            表示する日付
+          </Label>
+          <Input
+            id="calendar-date"
+            type="date"
+            value={data.date}
+            onChange={(e) => {
+              if (e.target.value) navigate({ date: e.target.value });
+            }}
+          />
+        </div>
         <Button
           variant="outline"
           size="icon"
-          aria-label={view === "week" ? "次の週" : "次の日"}
+          aria-label={view === "week" ? "次の週へ" : "次の日へ"}
           onClick={() => navigate({ date: shiftYmd(data.date, stepDays) })}
         >
-          <ChevronRight />
+          <ChevronRight aria-hidden="true" />
         </Button>
         <Button
           variant="outline"
-          size="sm"
+          className="h-10"
+          aria-label="今日へ移動"
           onClick={() => navigate({ date: data.todayYmd })}
           disabled={data.date === data.todayYmd}
         >
           今日
         </Button>
 
-        <div className="ml-auto w-44">
+        <div className="ml-auto w-40 sm:w-44">
+          <Label htmlFor="calendar-staff" className="sr-only">
+            スタッフで絞り込み
+          </Label>
           <Select
             value={staffId ?? ALL_STAFF}
             onValueChange={(v) => navigate({ staffId: v === ALL_STAFF ? null : v })}
           >
-            <SelectTrigger aria-label="スタッフで絞り込み">
+            <SelectTrigger id="calendar-staff">
               <SelectValue placeholder="スタッフ" />
             </SelectTrigger>
             <SelectContent>
@@ -229,12 +239,14 @@ export function CalendarView({
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         <p className="text-sm font-medium text-gray-700">
           {data.rangeLabel}
-          <span className="ml-2 text-xs font-normal text-gray-400">{visibleCount}件</span>
+          <span className="ml-2 text-xs font-normal text-gray-400">
+            {formatNumber(visibleCount)}件
+          </span>
         </p>
         <div className="flex flex-wrap items-center gap-3">
           {LEGEND.map((item) => (
             <span key={item.key} className="flex items-center gap-1.5 text-xs text-gray-500">
-              <span className={`h-2.5 w-2.5 rounded-full ${item.dot}`} />
+              <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${item.dot}`} />
               {RESERVATION_STATUS_LABELS[item.key]}
             </span>
           ))}

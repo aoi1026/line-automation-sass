@@ -19,7 +19,7 @@ export function CustomersExportButton({ q, tagId }: { q: string; tagId: string }
       download
       className={buttonVariants({ variant: "outline" })}
     >
-      <Download />
+      <Download aria-hidden="true" />
       CSVで書き出し
     </a>
   );

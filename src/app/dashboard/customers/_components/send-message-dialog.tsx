@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 /** 個別LINEメッセージ送信ダイアログ */
@@ -67,16 +68,24 @@ export function SendMessageDialog({
           <DialogDescription>{customerName}様のLINEにメッセージを送信します。</DialogDescription>
         </DialogHeader>
         {!linked && (
-          <p className="text-xs text-amber-600">
-            このお客様はLINE未連携のため送信できません。連携後にご利用いただけます。
+          <p
+            role="alert"
+            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+          >
+            このお客様はLINE未連携のため送信できません。顧客詳細の「LINE連携」から連携コードを発行してください。
           </p>
         )}
-        <Textarea
-          rows={5}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="メッセージ本文を入力してください"
-        />
+        <div className="space-y-1.5">
+          <Label htmlFor="send-message-content">メッセージ本文</Label>
+          <Textarea
+            id="send-message-content"
+            rows={5}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="メッセージ本文を入力してください"
+            disabled={!linked}
+          />
+        </div>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" disabled={sending}>
@@ -88,8 +97,8 @@ export function SendMessageDialog({
             onClick={() => void handleSend()}
             disabled={sending || !content.trim() || !linked}
           >
-            <Send />
-            {sending ? "送信中..." : "送信する"}
+            <Send aria-hidden="true" />
+            {sending ? "送信中…" : "送信する"}
           </Button>
         </DialogFooter>
       </DialogContent>

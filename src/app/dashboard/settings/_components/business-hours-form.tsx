@@ -14,9 +14,11 @@ import { Switch } from "@/components/ui/switch";
 export function BusinessHoursForm({ initialHours }: { initialHours: BusinessHours }) {
   const router = useRouter();
   const [hours, setHours] = useState<BusinessHours>(initialHours);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const updateDay = (day: DayKey, patch: Partial<BusinessHoursDay>) => {
+    setError(null);
     setHours((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }));
   };
 
@@ -24,14 +26,19 @@ export function BusinessHoursForm({ initialHours }: { initialHours: BusinessHour
     for (const day of DAY_KEYS) {
       const d = hours[day];
       if (!d.closed && (!d.open || !d.close)) {
-        toast.error(`${DAY_LABELS_JA[day]}曜日の開店・閉店時刻を入力してください`);
+        const message = `${DAY_LABELS_JA[day]}曜日の開店・閉店時刻を入力してください`;
+        setError(message);
+        toast.error(message);
         return;
       }
       if (!d.closed && d.close <= d.open) {
-        toast.error(`${DAY_LABELS_JA[day]}曜日: 閉店時刻は開店時刻より後にしてください`);
+        const message = `${DAY_LABELS_JA[day]}曜日: 閉店時刻は開店時刻より後にしてください`;
+        setError(message);
+        toast.error(message);
         return;
       }
     }
+    setError(null);
     setSaving(true);
     try {
       const res = await fetch("/api/store", {
@@ -66,16 +73,19 @@ export function BusinessHoursForm({ initialHours }: { initialHours: BusinessHour
             return (
               <div
                 key={day}
+                role="group"
+                aria-label={`${DAY_LABELS_JA[day]}曜日の営業時間`}
                 className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:gap-6"
               >
                 <div className="w-16 shrink-0 text-sm font-medium text-gray-900">
                   {DAY_LABELS_JA[day]}曜日
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex min-h-11 items-center gap-2">
                   <Switch
                     id={`closed-${day}`}
                     checked={d.closed}
                     onCheckedChange={(checked) => updateDay(day, { closed: checked })}
+                    aria-label={`${DAY_LABELS_JA[day]}曜日を定休日にする`}
                   />
                   <Label htmlFor={`closed-${day}`} className="cursor-pointer text-gray-600">
                     定休日
@@ -90,7 +100,9 @@ export function BusinessHoursForm({ initialHours }: { initialHours: BusinessHour
                     className="w-32"
                     aria-label={`${DAY_LABELS_JA[day]}曜日の開店時刻`}
                   />
-                  <span className="text-sm text-gray-400">〜</span>
+                  <span className="text-sm text-gray-400" aria-hidden="true">
+                    〜
+                  </span>
                   <Input
                     type="time"
                     value={d.close}
@@ -104,6 +116,11 @@ export function BusinessHoursForm({ initialHours }: { initialHours: BusinessHour
             );
           })}
         </div>
+        {error && (
+          <p role="alert" className="text-sm text-red-600">
+            {error}
+          </p>
+        )}
         <div className="flex justify-end">
           <Button onClick={save} disabled={saving}>
             {saving ? "保存中…" : "保存"}

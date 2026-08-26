@@ -1,9 +1,25 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-x-auto">
+export interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  /**
+   * 横スクロール用ラッパーに追加するクラス。
+   * 余白のある親（CardContent の p-5 など）の中で表を端まで伸ばしたいときに
+   * `-mx-5 px-5` のような指定を渡します。
+   */
+  containerClassName?: string;
+}
+
+const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({ className, containerClassName, ...props }, ref) => (
+    <div
+      // overscroll-x-contain: 表を横スクロールしてもページ全体が動かないようにする
+      // scroll-px-3: スクロール時にセルの内容が端で切れて見えないよう余白を確保する
+      className={cn(
+        "relative w-full overflow-x-auto overscroll-x-contain scroll-px-3 [scrollbar-width:thin]",
+        containerClassName
+      )}
+    >
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   )
@@ -33,7 +49,12 @@ TableRow.displayName = "TableRow";
 
 const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <th ref={ref} className={cn("h-11 px-3 text-left align-middle text-xs font-medium text-gray-500 whitespace-nowrap", className)} {...props} />
+    <th
+      ref={ref}
+      scope="col"
+      className={cn("h-11 px-3 text-left align-middle text-xs font-medium text-gray-500 whitespace-nowrap", className)}
+      {...props}
+    />
   )
 );
 TableHead.displayName = "TableHead";

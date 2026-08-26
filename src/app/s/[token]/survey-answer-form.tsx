@@ -12,6 +12,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 
+/** 「必須」バッジ（読み上げ時も必須と伝わるようにする） */
+function RequiredMark() {
+  return (
+    <span className="ml-1.5 rounded bg-red-100 px-1 py-0.5 align-middle text-[10px] font-medium text-red-600">
+      必須
+    </span>
+  );
+}
+
 /** アンケート回答フォーム（公開ページ /s/[token]） */
 export function SurveyAnswerForm({
   token,
@@ -64,6 +73,13 @@ export function SurveyAnswerForm({
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       toast.error("未回答の必須項目があります。ご確認をお願いいたします。");
+      // 最初の未回答までスクロールして、どこを直せばよいかすぐ分かるようにする
+      const firstId = questions.find((q) => q.id in nextErrors)?.id;
+      if (firstId && typeof document !== "undefined") {
+        document
+          .getElementById(`q-${firstId}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
 
@@ -90,10 +106,13 @@ export function SurveyAnswerForm({
   if (thanksMessage !== null) {
     return (
       <Card>
-        <CardContent className="p-8 text-center">
-          <CheckCircle2 className="mx-auto h-14 w-14 text-brand" />
-          <h1 className="mt-4 text-lg font-bold text-gray-900">回答を送信しました</h1>
-          <p className="mt-3 whitespace-pre-wrap text-left text-sm leading-relaxed text-gray-600">
+        <CardContent className="p-8 text-center" role="status">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-brand-light">
+            <CheckCircle2 aria-hidden="true" className="h-11 w-11 text-brand" />
+          </div>
+          <h1 className="mt-5 text-lg font-bold text-gray-900">回答を送信しました</h1>
+          <p className="mt-1.5 text-sm text-gray-500">ご協力ありがとうございました。</p>
+          <p className="mt-4 whitespace-pre-wrap rounded-lg bg-gray-50 p-4 text-left text-sm leading-relaxed text-gray-600">
             {thanksMessage}
           </p>
           <p className="mt-6 text-sm font-medium text-gray-700">{storeName}</p>
@@ -106,11 +125,11 @@ export function SurveyAnswerForm({
     return (
       <Card className="mt-8">
         <CardContent className="p-8 text-center">
-          <ClipboardX className="mx-auto h-12 w-12 text-gray-300" />
+          <ClipboardX aria-hidden="true" className="mx-auto h-12 w-12 text-gray-300" />
           <h1 className="mt-4 text-lg font-bold text-gray-900">
             アンケートが見つかりませんでした
           </h1>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm leading-relaxed text-gray-500">
             現在このアンケートはご回答いただけません。
           </p>
         </CardContent>
@@ -122,53 +141,84 @@ export function SurveyAnswerForm({
     <form onSubmit={handleSubmit}>
       <h1 className="text-lg font-bold text-gray-900">{surveyTitle}</h1>
       {surveyDescription !== "" && (
-        <p className="mt-1.5 whitespace-pre-wrap text-sm text-gray-500">{surveyDescription}</p>
+        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-gray-500">
+          {surveyDescription}
+        </p>
       )}
+      <p className="mt-2 text-xs text-gray-400">
+        全{questions.length}問・
+        <span className="text-red-600">必須</span>
+        の項目はご回答をお願いいたします。
+      </p>
 
       <div className="mt-5 flex flex-col gap-4">
-        {questions.map((question) => {
+        {questions.map((question, index) => {
           const value = answers[question.id];
           const error = errors[question.id];
+          const labelId = `q-${question.id}-label`;
+          const errorId = `q-${question.id}-error`;
           return (
-            <Card key={question.id}>
+            <Card key={question.id} id={`q-${question.id}`} className="scroll-mt-6">
               <CardContent className="p-4">
-                <p className="text-sm font-medium text-gray-900">
-                  {question.label}
-                  {question.required && (
-                    <span className="ml-1.5 align-middle text-xs font-medium text-red-500">
-                      必須
-                    </span>
-                  )}
-                </p>
+                {question.type === "text" ? (
+                  <label
+                    id={labelId}
+                    htmlFor={`q-${question.id}-input`}
+                    className="block text-sm font-medium text-gray-900"
+                  >
+                    <span className="text-gray-400">Q{index + 1}. </span>
+                    {question.label}
+                    {question.required && <RequiredMark />}
+                  </label>
+                ) : (
+                  <p id={labelId} className="text-sm font-medium text-gray-900">
+                    <span className="text-gray-400">Q{index + 1}. </span>
+                    {question.label}
+                    {question.required && <RequiredMark />}
+                  </p>
+                )}
 
                 {question.type === "rating" && (
-                  <div className="mt-3">
+                  <div
+                    role="group"
+                    aria-labelledby={labelId}
+                    aria-describedby={error ? errorId : undefined}
+                    className="mt-3"
+                  >
                     <div className="flex justify-between gap-1">
-                      {[1, 2, 3, 4, 5].map((score) => (
-                        <button
-                          key={score}
-                          type="button"
-                          onClick={() => setAnswer(question.id, score)}
-                          className="flex flex-1 flex-col items-center rounded-lg py-2 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
-                          aria-label={`${RATING_LABELS[score]}（${score}）`}
-                        >
-                          <Star
+                      {[1, 2, 3, 4, 5].map((score) => {
+                        const filled = typeof value === "number" && score <= value;
+                        const exact = value === score;
+                        return (
+                          <button
+                            key={score}
+                            type="button"
+                            onClick={() => setAnswer(question.id, score)}
+                            aria-pressed={exact}
+                            aria-label={`${score}・${RATING_LABELS[score]}`}
                             className={cn(
-                              "h-10 w-10 transition-colors",
-                              typeof value === "number" && score <= value
-                                ? "fill-amber-400 text-amber-400"
-                                : "text-gray-300"
+                              "flex min-h-[56px] flex-1 flex-col items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
+                              exact ? "bg-amber-50" : "hover:bg-gray-50"
                             )}
-                          />
-                        </button>
-                      ))}
+                          >
+                            <Star
+                              aria-hidden="true"
+                              className={cn(
+                                "h-10 w-10 transition-colors",
+                                filled ? "fill-amber-400 text-amber-400" : "text-gray-300"
+                              )}
+                            />
+                          </button>
+                        );
+                      })}
                     </div>
                     <p className="mt-1.5 text-center text-sm font-medium text-gray-700">
                       {typeof value === "number" ? (
                         RATING_LABELS[value]
                       ) : (
                         <span className="text-xs font-normal text-gray-400">
-                          星をタップして評価してください（1: {RATING_LABELS[1]} 〜 5: {RATING_LABELS[5]}）
+                          星をタップして評価してください（1: {RATING_LABELS[1]} 〜 5:{" "}
+                          {RATING_LABELS[5]}）
                         </span>
                       )}
                     </p>
@@ -176,7 +226,12 @@ export function SurveyAnswerForm({
                 )}
 
                 {question.type === "choice" && (
-                  <div className="mt-3 flex flex-col gap-2">
+                  <div
+                    role="group"
+                    aria-labelledby={labelId}
+                    aria-describedby={error ? errorId : undefined}
+                    className="mt-3 flex flex-col gap-2"
+                  >
                     {(question.options ?? []).map((option) => {
                       const selected = value === option;
                       return (
@@ -184,16 +239,18 @@ export function SurveyAnswerForm({
                           key={option}
                           type="button"
                           onClick={() => setAnswer(question.id, option)}
+                          aria-pressed={selected}
                           className={cn(
-                            "flex w-full items-center gap-2.5 rounded-lg border px-4 py-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
+                            "flex min-h-[48px] w-full items-center gap-2.5 rounded-lg border px-4 py-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
                             selected
                               ? "border-brand bg-brand/5 font-medium text-brand-dark"
                               : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                           )}
                         >
                           <span
+                            aria-hidden="true"
                             className={cn(
-                              "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                              "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
                               selected ? "border-brand" : "border-gray-300"
                             )}
                           >
@@ -208,16 +265,24 @@ export function SurveyAnswerForm({
 
                 {question.type === "text" && (
                   <Textarea
+                    id={`q-${question.id}-input`}
                     className="mt-3"
                     rows={4}
                     maxLength={2000}
                     placeholder="ご自由にご記入ください"
                     value={typeof value === "string" ? value : ""}
                     onChange={(e) => setAnswer(question.id, e.target.value)}
+                    aria-required={question.required || undefined}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? errorId : undefined}
                   />
                 )}
 
-                {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+                {error && (
+                  <p id={errorId} role="alert" className="mt-2 text-xs font-medium text-red-600">
+                    {error}
+                  </p>
+                )}
               </CardContent>
             </Card>
           );
@@ -227,6 +292,9 @@ export function SurveyAnswerForm({
       <Button type="submit" size="lg" className="mt-6 w-full" disabled={submitting}>
         {submitting ? "送信中…" : "回答を送信"}
       </Button>
+      <p className="mt-2 text-center text-xs leading-relaxed text-gray-500">
+        いただいたご回答は{storeName}のサービス向上のために活用いたします。
+      </p>
     </form>
   );
 }

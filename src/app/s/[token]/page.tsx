@@ -58,12 +58,13 @@ export default async function PublicSurveyPage({
       <PublicShell>
         <Card className="mt-12">
           <CardContent className="p-8 text-center">
-            <ClipboardX className="mx-auto h-12 w-12 text-gray-300" />
+            <ClipboardX aria-hidden="true" className="mx-auto h-12 w-12 text-gray-300" />
             <h1 className="mt-4 text-lg font-bold text-gray-900">
               アンケートが見つかりませんでした
             </h1>
-            <p className="mt-2 text-sm text-gray-500">
-              URLが正しいかご確認のうえ、もう一度お試しください。受付を終了している場合もございます。
+            <p className="mt-2 text-sm leading-relaxed text-gray-500">
+              URLが正しいかご確認のうえ、もう一度お試しください。
+              受付を終了している場合もございます。
             </p>
           </CardContent>
         </Card>
@@ -79,10 +80,13 @@ export default async function PublicSurveyPage({
       <PublicShell storeName={storeName}>
         <Card className="mt-8">
           <CardContent className="p-8 text-center">
-            <CheckCircle2 className="mx-auto h-12 w-12 text-brand" />
-            <h1 className="mt-4 text-lg font-bold text-gray-900">回答済み</h1>
-            <p className="mt-2 text-sm text-gray-500">
-              ご回答ありがとうございました（回答済みです）。
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-light">
+              <CheckCircle2 aria-hidden="true" className="h-9 w-9 text-brand" />
+            </div>
+            <h1 className="mt-4 text-lg font-bold text-gray-900">回答済みです</h1>
+            <p className="mt-2 text-sm leading-relaxed text-gray-500">
+              このアンケートには回答済みです。
+              ご協力いただき、ありがとうございました。
             </p>
             <p className="mt-6 text-sm font-medium text-gray-700">{storeName}</p>
           </CardContent>

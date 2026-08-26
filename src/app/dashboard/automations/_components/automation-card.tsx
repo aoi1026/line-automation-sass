@@ -92,6 +92,10 @@ export function AutomationCard({
   const [offsetText, setOffsetText] = React.useState(String(setting.offsetValue));
   const [saving, setSaving] = React.useState(false);
 
+  const kindLabel = MESSAGE_KIND_LABELS[kind];
+  /** オフのときは設定項目を操作できない（disabled 属性で明示する） */
+  const locked = !state.enabled;
+
   // サーバー側の値が更新されたら（router.refresh後）ローカル状態を同期
   React.useEffect(() => {
     setState(setting);
@@ -140,10 +144,10 @@ export function AutomationCard({
       <div className="flex items-start justify-between gap-4 p-5">
         <div className="flex min-w-0 items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
-            <Icon className="h-5 w-5" />
+            <Icon className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <h2 className="font-semibold text-gray-900">{MESSAGE_KIND_LABELS[kind]}</h2>
+            <h2 className="font-semibold text-gray-900">{kindLabel}</h2>
             <p className="mt-1 text-sm leading-relaxed text-gray-500">
               {AUTOMATION_DESCRIPTIONS[kind]}
             </p>
@@ -156,173 +160,222 @@ export function AutomationCard({
             setState((s) => ({ ...s, enabled: checked }));
             void patch({ enabled: checked }, checked ? "有効にしました" : "無効にしました");
           }}
-          aria-label={`${MESSAGE_KIND_LABELS[kind]}を有効にする`}
+          aria-label={`${kindLabel}の自動配信を有効にする`}
         />
       </div>
 
-      {state.enabled && (
-        <div className="border-t border-gray-100 p-5">
-          <div className="grid gap-4 sm:grid-cols-2">
+      <div className="border-t border-gray-100 p-5" aria-busy={saving || undefined}>
+        {locked && (
+          <p className="mb-4 rounded-lg bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-gray-500">
+            現在オフのため、下の設定は変更できません。右上のスイッチをオンにすると編集できます。
+          </p>
+        )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor={`template-${kind}`} className={locked ? "text-gray-400" : undefined}>
+              使用テンプレート
+            </Label>
+            <Select
+              value={state.templateId ?? "none"}
+              disabled={locked}
+              onValueChange={(v) => {
+                const id = v === "none" ? null : v;
+                setState((s) => ({ ...s, templateId: id }));
+                void patch({ templateId: id });
+              }}
+            >
+              <SelectTrigger
+                id={`template-${kind}`}
+                className="mt-1.5"
+                aria-describedby={`template-${kind}-help`}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">標準文面</SelectItem>
+                {state.templateId && !templates.some((t) => t.id === state.templateId) && (
+                  <SelectItem value={state.templateId}>（無効化されたテンプレート）</SelectItem>
+                )}
+                {templates.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p id={`template-${kind}-help`} className="mt-1.5 text-xs text-gray-500">
+              「テンプレート」ページで作成した文面を選べます。
+            </p>
+          </div>
+
+          {KINDS_WITH_OFFSET.includes(kind) && (
             <div>
-              <Label>使用テンプレート</Label>
+              <Label htmlFor={`offset-${kind}`} className={locked ? "text-gray-400" : undefined}>
+                送信タイミング
+              </Label>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-gray-700">
+                <span className="shrink-0">{kind === "REMINDER" ? "予約の" : "来店の"}</span>
+                <Input
+                  id={`offset-${kind}`}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={60}
+                  className="w-20"
+                  value={offsetText}
+                  disabled={locked}
+                  onChange={(e) => setOffsetText(e.target.value)}
+                  onBlur={commitOffset}
+                  aria-describedby={`offset-${kind}-help`}
+                />
+                <Select
+                  value={state.offsetUnit}
+                  disabled={locked}
+                  onValueChange={(v) => {
+                    const unit = v === "hours" ? "hours" : "days";
+                    setState((s) => ({ ...s, offsetUnit: unit }));
+                    void patch({ offsetUnit: unit });
+                  }}
+                >
+                  <SelectTrigger
+                    className="w-24"
+                    aria-label={`${kindLabel}の送信タイミングの単位`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hours">時間</SelectItem>
+                    <SelectItem value="days">日</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="shrink-0">{kind === "REMINDER" ? "前に送信" : "後に送信"}</span>
+              </div>
+              <p id={`offset-${kind}-help`} className="mt-1.5 text-xs text-gray-500">
+                1〜60の範囲でご指定ください。
+              </p>
+            </div>
+          )}
+
+          {KINDS_WITH_SEND_HOUR.includes(kind) && (
+            <div>
+              <Label htmlFor={`send-hour-${kind}`} className={locked ? "text-gray-400" : undefined}>
+                送信時刻
+              </Label>
+              <div className="mt-1.5 flex items-center gap-2 text-sm text-gray-700">
+                <Select
+                  value={String(state.sendHourJst)}
+                  disabled={locked}
+                  onValueChange={(v) => {
+                    const hour = Number(v);
+                    if (!Number.isInteger(hour)) return;
+                    setState((s) => ({ ...s, sendHourJst: hour }));
+                    void patch({ sendHourJst: hour });
+                  }}
+                >
+                  <SelectTrigger
+                    id={`send-hour-${kind}`}
+                    className="w-28"
+                    aria-describedby={`send-hour-${kind}-help`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sendHours.map((h) => (
+                      <SelectItem key={h} value={String(h)}>
+                        {h}時
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="shrink-0">以降に送信</span>
+              </div>
+              <p id={`send-hour-${kind}-help`} className="mt-1.5 text-xs text-gray-500">
+                早朝・深夜の通知を避けるための下限時刻です（日本時間）。
+              </p>
+            </div>
+          )}
+
+          {KINDS_WITH_COUPON.includes(kind) && (
+            <div>
+              <Label htmlFor={`coupon-${kind}`} className={locked ? "text-gray-400" : undefined}>
+                クーポン添付
+              </Label>
               <Select
-                value={state.templateId ?? "none"}
+                value={state.couponId ?? "none"}
+                disabled={locked}
                 onValueChange={(v) => {
                   const id = v === "none" ? null : v;
-                  setState((s) => ({ ...s, templateId: id }));
-                  void patch({ templateId: id });
+                  setState((s) => ({ ...s, couponId: id }));
+                  void patch({ couponId: id });
                 }}
               >
-                <SelectTrigger className="mt-1.5">
+                <SelectTrigger
+                  id={`coupon-${kind}`}
+                  className="mt-1.5"
+                  aria-describedby={`coupon-${kind}-help`}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">標準文面</SelectItem>
-                  {state.templateId && !templates.some((t) => t.id === state.templateId) && (
-                    <SelectItem value={state.templateId}>（無効化されたテンプレート）</SelectItem>
-                  )}
-                  {templates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
+                  <SelectItem value="none">なし</SelectItem>
+                  {coupons.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.title}
+                      {c.active ? "" : "（無効）"}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p id={`coupon-${kind}-help`} className="mt-1.5 text-xs text-gray-500">
+                発行されたクーポンのURLが {"{クーポンリンク}"} に差し込まれます。
+              </p>
             </div>
+          )}
 
-            {KINDS_WITH_OFFSET.includes(kind) && (
-              <div>
-                <Label htmlFor={`offset-${kind}`}>送信タイミング</Label>
-                <div className="mt-1.5 flex items-center gap-2 text-sm text-gray-700">
-                  <span className="shrink-0">{kind === "REMINDER" ? "予約の" : "来店の"}</span>
-                  <Input
-                    id={`offset-${kind}`}
-                    type="number"
-                    min={1}
-                    max={60}
-                    className="w-20"
-                    value={offsetText}
-                    onChange={(e) => setOffsetText(e.target.value)}
-                    onBlur={commitOffset}
-                  />
-                  <Select
-                    value={state.offsetUnit}
-                    onValueChange={(v) => {
-                      const unit = v === "hours" ? "hours" : "days";
-                      setState((s) => ({ ...s, offsetUnit: unit }));
-                      void patch({ offsetUnit: unit });
-                    }}
-                  >
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="hours">時間</SelectItem>
-                      <SelectItem value="days">日</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <span className="shrink-0">{kind === "REMINDER" ? "前に送信" : "後に送信"}</span>
-                </div>
-              </div>
-            )}
-
-            {KINDS_WITH_SEND_HOUR.includes(kind) && (
-              <div>
-                <Label>送信時刻</Label>
-                <div className="mt-1.5 flex items-center gap-2 text-sm text-gray-700">
-                  <Select
-                    value={String(state.sendHourJst)}
-                    onValueChange={(v) => {
-                      const hour = Number(v);
-                      if (!Number.isInteger(hour)) return;
-                      setState((s) => ({ ...s, sendHourJst: hour }));
-                      void patch({ sendHourJst: hour });
-                    }}
-                  >
-                    <SelectTrigger className="w-28">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sendHours.map((h) => (
-                        <SelectItem key={h} value={String(h)}>
-                          {h}時
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="shrink-0">以降に送信</span>
-                </div>
-              </div>
-            )}
-
-            {KINDS_WITH_COUPON.includes(kind) && (
-              <div>
-                <Label>クーポン添付</Label>
-                <Select
-                  value={state.couponId ?? "none"}
-                  onValueChange={(v) => {
-                    const id = v === "none" ? null : v;
-                    setState((s) => ({ ...s, couponId: id }));
-                    void patch({ couponId: id });
-                  }}
+          {KINDS_WITH_SURVEY.includes(kind) && (
+            <div>
+              <Label htmlFor={`survey-${kind}`} className={locked ? "text-gray-400" : undefined}>
+                アンケート添付
+              </Label>
+              <Select
+                value={state.surveyId ?? "none"}
+                disabled={locked}
+                onValueChange={(v) => {
+                  const id = v === "none" ? null : v;
+                  setState((s) => ({ ...s, surveyId: id }));
+                  void patch({ surveyId: id });
+                }}
+              >
+                <SelectTrigger
+                  id={`survey-${kind}`}
+                  className="mt-1.5"
+                  aria-describedby={`survey-${kind}-help`}
                 >
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">なし</SelectItem>
-                    {coupons.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.title}
-                        {c.active ? "" : "（無効）"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="mt-1.5 text-xs text-gray-500">
-                  発行されたクーポンのURLが {"{クーポンリンク}"} に差し込まれます。
-                </p>
-              </div>
-            )}
-
-            {KINDS_WITH_SURVEY.includes(kind) && (
-              <div>
-                <Label>アンケート添付</Label>
-                <Select
-                  value={state.surveyId ?? "none"}
-                  onValueChange={(v) => {
-                    const id = v === "none" ? null : v;
-                    setState((s) => ({ ...s, surveyId: id }));
-                    void patch({ surveyId: id });
-                  }}
-                >
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">なし</SelectItem>
-                    {surveys.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.title}
-                        {s.active ? "" : "（無効）"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="mt-1.5 text-xs text-gray-500">
-                  回答ページのURLが {"{アンケートリンク}"} に差し込まれます。
-                </p>
-              </div>
-            )}
-          </div>
-
-          {kind === "REBOOKING" && (
-            <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-gray-500">
-              メニューごとの推奨間隔は「設定 → メニュー管理」で変更できます。未設定のメニューは店舗デフォルト（「設定 → 店舗情報」）が使われます。
-            </p>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">なし</SelectItem>
+                  {surveys.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.title}
+                      {s.active ? "" : "（無効）"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p id={`survey-${kind}-help`} className="mt-1.5 text-xs text-gray-500">
+                回答ページのURLが {"{アンケートリンク}"} に差し込まれます。
+              </p>
+            </div>
           )}
         </div>
-      )}
+
+        {kind === "REBOOKING" && (
+          <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-gray-500">
+            メニューごとの推奨間隔は「設定 → メニュー」で変更できます。未設定のメニューは店舗の標準間隔（「設定 → 店舗情報」）が使われます。
+          </p>
+        )}
+      </div>
     </Card>
   );
 }

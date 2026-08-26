@@ -9,7 +9,7 @@ import { Prisma, type Store } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getLineProfile, replyText, verifyLineSignature } from "@/lib/line/client";
 import { getAppUrl } from "@/lib/utils";
-import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 /** Web予約ページのURL */
 function bookingUrl(store: Pick<Store, "slug">): string {
@@ -146,15 +146,11 @@ async function handleMessage(store: Store, event: MessageEvent): Promise<void> {
 export async function POST(req: Request, ctx: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await ctx.params;
 
-  // 大量リクエストによる過負荷を防ぐ。LINE側の再送を招かないよう、制限中も200を返す
-  const rl = rateLimit(`line-webhook:${storeId}`, 600, 60_000);
-  if (!rl.ok) {
-    console.warn(`[line-webhook] レート制限のためイベントを無視しました: store=${storeId}`);
-    return NextResponse.json({
-      ok: true,
-      ignored: true,
-      message: "リクエストが多すぎるため、このイベントは処理されませんでした",
-    });
+  // 発信元IP単位の粗い上限。署名を持たない大量リクエストで負荷をかけられるのを防ぐ。
+  // LINEのサーバーは限られたIPレンジから送ってくるため、実運用の妨げにならない値にする。
+  const ipRl = rateLimit(`line-webhook-ip:${getClientIp(req)}`, 1200, 60_000);
+  if (!ipRl.ok) {
+    return NextResponse.json({ error: "リクエストが多すぎます" }, { status: 429 });
   }
 
   const store = await prisma.store.findUnique({ where: { id: storeId } });
@@ -166,6 +162,19 @@ export async function POST(req: Request, ctx: { params: Promise<{ storeId: strin
   const signature = req.headers.get("x-line-signature") ?? "";
   if (!verifyLineSignature(store, body, signature)) {
     return NextResponse.json({ error: "署名の検証に失敗しました" }, { status: 401 });
+  }
+
+  // 店舗単位の上限は「署名検証を通った本物のイベント」だけを数える。
+  // 検証前に数えてしまうと、storeId を知る第三者が署名なしのリクエストを
+  // 送りつけるだけで枠を使い切らせ、正規のイベントを無音で捨てさせられる。
+  const rl = rateLimit(`line-webhook:${storeId}`, 600, 60_000);
+  if (!rl.ok) {
+    console.warn(`[line-webhook] レート制限のためイベントを無視しました: store=${storeId}`);
+    return NextResponse.json({
+      ok: true,
+      ignored: true,
+      message: "リクエストが多すぎるため、このイベントは処理されませんでした",
+    });
   }
 
   let events: LineWebhookEvent[] = [];

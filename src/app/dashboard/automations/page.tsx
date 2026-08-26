@@ -56,16 +56,22 @@ export default async function AutomationsPage() {
       />
 
       {demoMode && (
-        <div className="mb-6 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <Info className="h-4 w-4 shrink-0" />
-          デモモード中はメッセージ履歴への記録のみ行われます。
+        <div
+          role="status"
+          className="mb-6 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+        >
+          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            デモモード中はメッセージがお客様に届かず、履歴への記録のみ行われます。「設定 →
+            LINE連携」でチャネルを設定すると実際に送信されます。
+          </span>
         </div>
       )}
 
       <Card className="mb-6">
         <CardContent className="flex items-start gap-3 p-5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
-            <Zap className="h-5 w-5" />
+            <Zap className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
             <p className="text-sm font-medium text-gray-900">自動配信のしくみ</p>

@@ -42,7 +42,7 @@ export function DeleteReservationButton({ id }: { id: string }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
-          <Trash2 />
+          <Trash2 aria-hidden="true" />
           削除
         </Button>
       </DialogTrigger>
@@ -58,7 +58,7 @@ export function DeleteReservationButton({ id }: { id: string }) {
             閉じる
           </Button>
           <Button variant="destructive" disabled={submitting} onClick={handleDelete}>
-            削除する
+            {submitting ? "削除中…" : "削除する"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { RESERVATION_STATUS_LABELS } from "@/lib/constants";
 import type { ReservationStatus } from "@prisma/client";
 import {
   layoutColumnBlocks,
@@ -135,7 +136,9 @@ export function CalendarGrid({
               )}
               style={{ flex: "1 1 auto", width: columnMinWidth, minWidth: columnMinWidth }}
             >
-              <p className="truncate text-sm font-semibold text-gray-900">{col.title}</p>
+              <p className="truncate text-sm font-semibold text-gray-900" title={col.title}>
+                {col.title}
+              </p>
               <p className="truncate text-xs text-gray-500">
                 {col.subtitle}
                 {col.today && <span className="ml-1 font-medium text-brand">今日</span>}
@@ -178,6 +181,7 @@ export function CalendarGrid({
                   className="absolute right-1 z-30 -translate-y-1/2 rounded bg-red-500 px-1 py-0.5 text-[10px] font-medium leading-none text-white"
                   style={{ top: nowTop }}
                 >
+                  <span className="sr-only">現在時刻 </span>
                   {minToHm(nowMin ?? 0)}
                 </div>
               )}
@@ -260,7 +264,7 @@ function GridColumnBody({
             }
             aria-label={`${column.title} ${minToHm(m)} に予約を作成`}
             className={cn(
-              "absolute inset-x-0 border-t transition-colors",
+              "absolute inset-x-0 border-t transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50",
               m % 60 === 0 ? "border-gray-200" : "border-gray-100",
               off
                 ? "cursor-default"
@@ -303,6 +307,7 @@ function GridColumnBody({
       {/* 現在時刻 */}
       {nowTop !== null && (
         <div
+          aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 z-[15] border-t-2 border-red-500"
           style={{ top: nowTop }}
         />
@@ -336,8 +341,9 @@ function ReservationBlock({
       type="button"
       onClick={() => onSelect(block)}
       title={`${block.startTime}〜${block.endTime} ${block.customerName}様 / ${block.serviceName}`}
+      aria-label={`${block.startTime}から${block.endTime} ${block.customerName}様 ${block.serviceName} 担当${block.staffName} ${RESERVATION_STATUS_LABELS[block.status]}`}
       className={cn(
-        "absolute z-10 overflow-hidden rounded-md border px-1.5 py-0.5 text-left shadow-sm transition-colors",
+        "absolute z-10 overflow-hidden rounded-md border px-1.5 py-0.5 text-left shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
         BLOCK_TONES[block.status],
         faded && "opacity-75"
       )}

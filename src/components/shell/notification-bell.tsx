@@ -73,6 +73,13 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
   const [items, setItems] = React.useState<NotificationItem[] | null>(null);
   const [loading, setLoading] = React.useState(false);
 
+  // 通知一覧ページなど、ベル以外の場所で既読にしたときは router.refresh() により
+  // サーバー側の未読件数が新しい値で渡ってくる。state は初期化時にしか
+  // props を読まないため、変化を明示的に取り込んでバッジのズレを防ぐ。
+  React.useEffect(() => {
+    setUnread(initialUnread);
+  }, [initialUnread]);
+
   const refreshUnread = React.useCallback(async () => {
     try {
       const res = await fetch("/api/notifications?count=1");

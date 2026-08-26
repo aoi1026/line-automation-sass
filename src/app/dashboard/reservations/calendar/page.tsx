@@ -52,7 +52,7 @@ export default async function ReservationCalendarPage({
             href={`/dashboard/reservations?date=${date}`}
             className={buttonVariants({ variant: "outline" })}
           >
-            <List />
+            <List aria-hidden="true" />
             一覧に戻る
           </Link>
         }

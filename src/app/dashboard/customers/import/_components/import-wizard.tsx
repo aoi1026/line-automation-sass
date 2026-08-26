@@ -17,7 +17,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { GENDER_LABELS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,7 +91,7 @@ function StepIndicator({ current }: { current: Step }) {
         const done = i < currentIndex;
         const active = i === currentIndex;
         return (
-          <li key={step.key} className="flex items-center gap-2">
+          <li key={step.key} className="flex items-center gap-2" aria-current={active ? "step" : undefined}>
             <span
               className={cn(
                 "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold",
@@ -251,10 +251,10 @@ export function ImportWizard({ existingByPhone }: { existingByPhone: Record<stri
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/60 px-6 py-10 text-center">
-                <UploadCloud className="mx-auto h-10 w-10 text-gray-300" />
+                <UploadCloud aria-hidden="true" className="mx-auto h-10 w-10 text-gray-300" />
                 <p className="mt-3 font-medium text-gray-700">CSVファイルをアップロード</p>
                 <p className="mt-1 text-sm text-gray-500">
-                  1回に取り込めるのは{MAX_IMPORT_ROWS}行までです。文字コードはUTF-8とShift_JISに対応しています。
+                  1回に取り込めるのは{formatNumber(MAX_IMPORT_ROWS)}行までです。文字コードはUTF-8とShift_JISに対応しています。
                 </p>
                 <input
                   ref={fileInputRef}
@@ -265,11 +265,11 @@ export function ImportWizard({ existingByPhone }: { existingByPhone: Record<stri
                 />
                 <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
                   <Button type="button" onClick={() => fileInputRef.current?.click()}>
-                    <FileSpreadsheet />
+                    <FileSpreadsheet aria-hidden="true" />
                     ファイルを選ぶ
                   </Button>
                   <Button type="button" variant="outline" onClick={downloadTemplate}>
-                    <Download />
+                    <Download aria-hidden="true" />
                     テンプレートCSVをダウンロード
                   </Button>
                 </div>
@@ -279,8 +279,11 @@ export function ImportWizard({ existingByPhone }: { existingByPhone: Record<stri
               </div>
 
               {parseError && (
-                <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                >
+                  <XCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{parseError}</span>
                 </div>
               )}
@@ -331,30 +334,33 @@ export function ImportWizard({ existingByPhone }: { existingByPhone: Record<stri
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatCard
               label="新規登録"
-              value={`${counts.newCount}件`}
-              icon={<UserPlus />}
+              value={`${formatNumber(counts.newCount)}件`}
+              icon={<UserPlus aria-hidden="true" />}
               sub="まだ登録のないお客様"
             />
             <StatCard
               label="更新"
-              value={`${counts.updateCount}件`}
-              icon={<Users />}
+              value={`${formatNumber(counts.updateCount)}件`}
+              icon={<Users aria-hidden="true" />}
               sub="電話番号が一致した既存のお客様"
             />
             <StatCard
               label="エラー"
-              value={`${counts.errorCount}件`}
-              icon={<AlertTriangle />}
+              value={`${formatNumber(counts.errorCount)}件`}
+              icon={<AlertTriangle aria-hidden="true" />}
               sub="取り込まずにスキップします"
             />
           </div>
 
           {tooManyRows && (
-            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              <XCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                {rows.length}行が含まれています。1回に取り込めるのは{MAX_IMPORT_ROWS}
-                行までです。ファイルを分割してからお試しください。
+                {formatNumber(rows.length)}行が含まれています。1回に取り込めるのは
+                {formatNumber(MAX_IMPORT_ROWS)}行までです。ファイルを分割してからお試しください。
               </span>
             </div>
           )}
@@ -363,8 +369,8 @@ export function ImportWizard({ existingByPhone }: { existingByPhone: Record<stri
             <CardHeader>
               <CardTitle>取り込み内容の確認</CardTitle>
               <CardDescription>
-                {fileName ? `${fileName} を読み込みました。` : ""}全{rows.length}行のうち、先頭
-                {Math.min(rows.length, PREVIEW_ROW_LIMIT)}行を表示しています。
+                {fileName ? `${fileName} を読み込みました。` : ""}全{formatNumber(rows.length)}行のうち、先頭
+                {formatNumber(Math.min(rows.length, PREVIEW_ROW_LIMIT))}行を表示しています。
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -438,7 +444,7 @@ export function ImportWizard({ existingByPhone }: { existingByPhone: Record<stri
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={backToSelect} disabled={importing}>
-              <ArrowLeft />
+              <ArrowLeft aria-hidden="true" />
               ファイルを選び直す
             </Button>
             <Button
@@ -446,8 +452,8 @@ export function ImportWizard({ existingByPhone }: { existingByPhone: Record<stri
               onClick={runImport}
               disabled={importing || tooManyRows || importable === 0}
             >
-              <UploadCloud />
-              {importing ? "取り込み中..." : `${importable}件を取り込む`}
+              <UploadCloud aria-hidden="true" />
+              {importing ? "取り込み中…" : `${formatNumber(importable)}件を取り込む`}
             </Button>
           </div>
         </div>
@@ -456,9 +462,9 @@ export function ImportWizard({ existingByPhone }: { existingByPhone: Record<stri
       {step === "done" && result && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard label="新規登録" value={`${result.created}件`} icon={<UserPlus />} />
-            <StatCard label="更新" value={`${result.updated}件`} icon={<Users />} />
-            <StatCard label="スキップ" value={`${result.skipped}件`} icon={<AlertTriangle />} />
+            <StatCard label="新規登録" value={`${formatNumber(result.created)}件`} icon={<UserPlus aria-hidden="true" />} />
+            <StatCard label="更新" value={`${formatNumber(result.updated)}件`} icon={<Users aria-hidden="true" />} />
+            <StatCard label="スキップ" value={`${formatNumber(result.skipped)}件`} icon={<AlertTriangle aria-hidden="true" />} />
           </div>
 
           <Card>
@@ -494,14 +500,14 @@ export function ImportWizard({ existingByPhone }: { existingByPhone: Record<stri
                 </Table>
               ) : (
                 <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  <CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" />
                   <span>スキップされた行はありませんでした。</span>
                 </div>
               )}
 
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" onClick={restart}>
-                  <RotateCcw />
+                  <RotateCcw aria-hidden="true" />
                   続けてインポート
                 </Button>
                 <Link href="/dashboard/customers" className={buttonVariants()}>

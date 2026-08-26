@@ -39,27 +39,33 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StaffRow | null>(null);
   const [form, setForm] = useState<FormState>({ name: "", title: "", sortOrder: "0" });
+  const [nameError, setNameError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const set = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
 
   const openAdd = () => {
     setEditing(null);
+    setNameError(null);
     setForm({ name: "", title: "", sortOrder: String(staffMembers.length) });
     setDialogOpen(true);
   };
 
   const openEdit = (staff: StaffRow) => {
     setEditing(staff);
+    setNameError(null);
     setForm({ name: staff.name, title: staff.title, sortOrder: String(staff.sortOrder) });
     setDialogOpen(true);
   };
 
   const submit = async () => {
     if (!form.name.trim()) {
+      setNameError("名前を入力してください");
       toast.error("名前を入力してください");
       return;
     }
+    setNameError(null);
     const sortOrder = form.sortOrder.trim() === "" ? 0 : Number(form.sortOrder);
     if (!Number.isInteger(sortOrder) || sortOrder < 0) {
       toast.error("表示順は0以上の整数で入力してください");
@@ -112,16 +118,22 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
   };
 
   const remove = async (staff: StaffRow) => {
-    if (!window.confirm(`「${staff.name}」を削除します。よろしいですか？\n過去の予約履歴はそのまま残ります。`)) {
-      return;
-    }
-    const res = await fetch(`/api/staff/${staff.id}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("スタッフを削除しました");
-      router.refresh();
-    } else {
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
-      toast.error(data?.error ?? "削除に失敗しました");
+    const ok = window.confirm(
+      `「${staff.name}」を削除します。\nWeb予約ページの担当者一覧から表示されなくなり、お客様は指名できなくなります。\n過去の予約履歴はそのまま残ります。`
+    );
+    if (!ok) return;
+    setDeletingId(staff.id);
+    try {
+      const res = await fetch(`/api/staff/${staff.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("スタッフを削除しました");
+        router.refresh();
+      } else {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        toast.error(data?.error ?? "削除に失敗しました");
+      }
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -136,7 +148,7 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
             </CardDescription>
           </div>
           <Button onClick={openAdd} className="shrink-0">
-            <Plus />
+            <Plus aria-hidden="true" />
             スタッフを追加
           </Button>
         </div>
@@ -144,12 +156,12 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
       <CardContent>
         {staffMembers.length === 0 ? (
           <EmptyState
-            icon={<Users />}
+            icon={<Users aria-hidden="true" />}
             title="スタッフが未登録"
-            description="スタッフを登録すると、予約時に担当者を指定できるようになります。"
+            description="スタッフを登録すると、予約時に担当者を指定でき、お客様も指名予約ができるようになります。"
             action={
               <Button onClick={openAdd}>
-                <Plus />
+                <Plus aria-hidden="true" />
                 スタッフを追加
               </Button>
             }
@@ -175,23 +187,31 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
                     <Switch
                       checked={staff.active}
                       onCheckedChange={(checked) => toggleActive(staff, checked)}
-                      aria-label={`${staff.name}の有効・無効`}
+                      aria-label={`${staff.name}をWeb予約ページに表示する`}
                     />
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(staff)}>
-                        <Pencil />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-11"
+                        onClick={() => openEdit(staff)}
+                        aria-label={`${staff.name}を編集`}
+                      >
+                        <Pencil aria-hidden="true" />
                         編集
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                        className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
                         onClick={() => remove(staff)}
+                        disabled={deletingId === staff.id}
+                        aria-label={`${staff.name}を削除`}
                       >
-                        <Trash2 />
-                        削除
+                        <Trash2 aria-hidden="true" />
+                        {deletingId === staff.id ? "削除中…" : "削除"}
                       </Button>
                     </div>
                   </TableCell>
@@ -214,13 +234,35 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
           </DialogHeader>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="staff-name">名前</Label>
+              <Label htmlFor="staff-name">
+                名前
+                <span className="ml-0.5 text-red-500" aria-hidden="true">
+                  *
+                </span>
+              </Label>
               <Input
                 id="staff-name"
                 value={form.name}
-                onChange={(e) => set({ name: e.target.value })}
+                onChange={(e) => {
+                  set({ name: e.target.value });
+                  if (nameError) setNameError(null);
+                }}
                 placeholder="例: 山田 花子"
+                required
+                aria-required="true"
+                aria-invalid={nameError ? true : undefined}
+                aria-describedby={
+                  nameError ? "staff-name-error staff-name-help" : "staff-name-help"
+                }
               />
+              {nameError && (
+                <p id="staff-name-error" role="alert" className="mt-1 text-xs text-red-600">
+                  {nameError}
+                </p>
+              )}
+              <p id="staff-name-help" className="mt-1 text-xs text-gray-500">
+                Web予約ページの担当者選択に表示されます。
+              </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
@@ -229,18 +271,27 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
                   id="staff-title"
                   value={form.title}
                   onChange={(e) => set({ title: e.target.value })}
-                  placeholder="スタイリスト"
+                  placeholder="例: スタイリスト"
+                  aria-describedby="staff-title-help"
                 />
+                <p id="staff-title-help" className="mt-1 text-xs text-gray-500">
+                  名前の下に表示されます。空欄でも登録できます。
+                </p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="staff-sort">表示順</Label>
                 <Input
                   id="staff-sort"
                   type="number"
+                  inputMode="numeric"
                   min={0}
                   value={form.sortOrder}
                   onChange={(e) => set({ sortOrder: e.target.value })}
+                  aria-describedby="staff-sort-help"
                 />
+                <p id="staff-sort-help" className="mt-1 text-xs text-gray-500">
+                  数字が小さいほど上に表示されます。
+                </p>
               </div>
             </div>
           </div>

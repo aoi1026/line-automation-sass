@@ -25,9 +25,9 @@ import {
   jstParts,
   jstStartOfDay,
 } from "@/lib/jst";
-import { formatNumber } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -195,25 +195,25 @@ export default async function DashboardHomePage() {
             label="今日の予約"
             value={`${formatNumber(todayReservations.length)}件`}
             sub={formatJstDateShort(now)}
-            icon={<CalendarDays />}
+            icon={<CalendarDays aria-hidden="true" />}
           />
           <StatCard
             label="今月の来店"
             value={`${formatNumber(monthVisitCount)}件`}
             sub={`${month}月の来店済み件数`}
-            icon={<Sparkles />}
+            icon={<Sparkles aria-hidden="true" />}
           />
           <StatCard
             label="今月の配信"
             value={`${formatNumber(monthMessageCount)}件`}
             sub={`内訳: 自動 ${formatNumber(monthAutoMessageCount)}件`}
-            icon={<Send />}
+            icon={<Send aria-hidden="true" />}
           />
           <StatCard
             label="LINE連携済み"
             value={`${formatNumber(lineLinkedCount)}人`}
             sub={`全顧客${formatNumber(customerCount)}人中`}
-            icon={<MessageCircle />}
+            icon={<MessageCircle aria-hidden="true" />}
           />
         </div>
 
@@ -222,7 +222,7 @@ export default async function DashboardHomePage() {
           <Card className="border-amber-200 bg-amber-50">
             <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
               <div className="flex flex-1 items-center gap-3">
-                <TriangleAlert className="h-5 w-5 shrink-0 text-amber-500" />
+                <TriangleAlert aria-hidden="true" className="h-5 w-5 shrink-0 text-amber-500" />
                 <p className="text-sm text-amber-900">
                   未確定のWeb予約が
                   <span className="mx-1 font-bold tabular-nums">
@@ -231,14 +231,14 @@ export default async function DashboardHomePage() {
                   あります。内容をご確認のうえ、確定してください。
                 </p>
               </div>
-              <Link href="/dashboard/reservations?status=PENDING" className="shrink-0">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-amber-300 bg-white text-amber-800 hover:bg-amber-100"
-                >
-                  予約を確認
-                </Button>
+              <Link
+                href="/dashboard/reservations?status=PENDING"
+                className={cn(
+                  buttonVariants({ size: "sm", variant: "outline" }),
+                  "shrink-0 border-amber-300 bg-white text-amber-800 hover:bg-amber-100"
+                )}
+              >
+                未確定の予約を確認
               </Link>
             </CardContent>
           </Card>
@@ -260,9 +260,17 @@ export default async function DashboardHomePage() {
               {todayReservations.length === 0 ? (
                 <div className="p-5 pt-0">
                   <EmptyState
-                    icon={<CalendarDays />}
-                    title="本日の予約はありません"
-                    description="新しい予約は予約管理ページから登録できます。"
+                    icon={<CalendarDays aria-hidden="true" />}
+                    title="本日の予約はまだありません"
+                    description="予約管理ページから、この日の予約を登録できます。"
+                    action={
+                      <Link
+                        href="/dashboard/reservations"
+                        className={buttonVariants({ size: "sm" })}
+                      >
+                        予約を登録
+                      </Link>
+                    }
                   />
                 </div>
               ) : (
@@ -270,8 +278,8 @@ export default async function DashboardHomePage() {
                   {todayReservations.map((r) => (
                     <Link
                       key={r.id}
-                      href="/dashboard/reservations"
-                      className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50"
+                      href={`/dashboard/reservations/${r.id}`}
+                      className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50"
                     >
                       <div className="w-12 shrink-0 text-sm font-semibold tabular-nums text-gray-900">
                         {formatJstTime(r.startAt)}
@@ -310,9 +318,17 @@ export default async function DashboardHomePage() {
               {recentLogs.length === 0 ? (
                 <div className="p-5 pt-0">
                   <EmptyState
-                    icon={<Send />}
+                    icon={<Send aria-hidden="true" />}
                     title="配信履歴はまだありません"
-                    description="自動配信やキャンペーンを配信すると、履歴がここに表示されます。"
+                    description="自動配信をオンにすると、リマインダーや来店お礼が自動でお客様に届きます。"
+                    action={
+                      <Link
+                        href="/dashboard/automations"
+                        className={buttonVariants({ variant: "outline", size: "sm" })}
+                      >
+                        自動配信を設定
+                      </Link>
+                    }
                   />
                 </div>
               ) : (

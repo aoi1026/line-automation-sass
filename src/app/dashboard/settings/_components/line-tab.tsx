@@ -34,6 +34,7 @@ export function LineTab({ line }: { line: LineInfo }) {
   const [token, setToken] = useState("");
   const [secret, setSecret] = useState("");
   const [basicId, setBasicId] = useState(line.basicId);
+  const [tokenError, setTokenError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [unlinkOpen, setUnlinkOpen] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
@@ -114,9 +115,11 @@ export function LineTab({ line }: { line: LineInfo }) {
 
   const save = async () => {
     if (!line.configured && !token.trim()) {
-      toast.error("Channel Access Tokenを入力してください");
+      setTokenError("チャネルアクセストークンを入力してください");
+      toast.error("チャネルアクセストークンを入力してください");
       return;
     }
+    setTokenError(null);
     setSaving(true);
     try {
       const res = await fetch("/api/store", {
@@ -172,7 +175,7 @@ export function LineTab({ line }: { line: LineInfo }) {
       {/* ステータスバナー */}
       {line.configured ? (
         <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
           <div className="text-sm text-emerald-800">
             <p className="font-semibold">LINE連携済み</p>
             <p className="mt-0.5">メッセージはLINEで実送信されます。</p>
@@ -180,7 +183,7 @@ export function LineTab({ line }: { line: LineInfo }) {
         </div>
       ) : (
         <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
           <div className="text-sm text-amber-800">
             <p className="font-semibold">デモモードで動作中</p>
             <p className="mt-0.5">
@@ -200,42 +203,75 @@ export function LineTab({ line }: { line: LineInfo }) {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="line-token">Channel Access Token</Label>
+            <Label htmlFor="line-token">
+              チャネルアクセストークン（Channel Access Token）
+              {!line.configured && (
+                <span className="ml-0.5 text-red-500" aria-hidden="true">
+                  *
+                </span>
+              )}
+            </Label>
             <Textarea
               id="line-token"
               value={token}
-              onChange={(e) => setToken(e.target.value)}
+              onChange={(e) => {
+                setToken(e.target.value);
+                if (tokenError) setTokenError(null);
+              }}
               rows={3}
               placeholder={
                 line.configured
-                  ? "設定済み。変更する場合のみ入力"
-                  : "Channel Access Token（長期）を入力"
+                  ? "設定済みです。変更する場合のみご入力ください"
+                  : "長期のチャネルアクセストークンを貼り付けてください"
               }
               className="font-mono text-xs"
+              required={!line.configured}
+              aria-required={line.configured ? undefined : true}
+              aria-invalid={tokenError ? true : undefined}
+              aria-describedby={
+                tokenError ? "line-token-error line-token-help" : "line-token-help"
+              }
             />
+            {tokenError && (
+              <p id="line-token-error" role="alert" className="mt-1 text-xs text-red-600">
+                {tokenError}
+              </p>
+            )}
+            <p id="line-token-help" className="mt-1 text-xs text-gray-500">
+              LINE Developersの「Messaging API設定」で発行できます。保存後は表示されません。
+            </p>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="line-secret">Channel Secret</Label>
+            <Label htmlFor="line-secret">チャネルシークレット（Channel Secret）</Label>
             <Input
               id="line-secret"
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
               placeholder={
-                line.configured ? "設定済み。変更する場合のみ入力" : "Channel Secretを入力"
+                line.configured
+                  ? "設定済みです。変更する場合のみご入力ください"
+                  : "チャネルシークレットをご入力ください"
               }
               className="font-mono"
+              aria-describedby="line-secret-help"
             />
+            <p id="line-secret-help" className="mt-1 text-xs text-gray-500">
+              LINEからの通知が正しい送信元か確認するために使用します。
+            </p>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="line-basic-id">LINE Basic ID</Label>
+            <Label htmlFor="line-basic-id">LINE ID（ベーシックID）</Label>
             <Input
               id="line-basic-id"
               value={basicId}
               onChange={(e) => setBasicId(e.target.value)}
               placeholder="@123abcde"
               className="max-w-xs"
+              aria-describedby="line-basic-id-help"
             />
-            <p className="text-xs text-gray-500">友だち追加のご案内リンクに使用されます。</p>
+            <p id="line-basic-id-help" className="mt-1 text-xs text-gray-500">
+              友だち追加のご案内リンクに使用されます。「@」から始まるIDをご入力ください。
+            </p>
           </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
             {line.configured ? (
@@ -244,7 +280,7 @@ export function LineTab({ line }: { line: LineInfo }) {
                 className="text-red-600 hover:bg-red-50 hover:text-red-700"
                 onClick={() => setUnlinkOpen(true)}
               >
-                <Unlink />
+                <Unlink aria-hidden="true" />
                 連携を解除
               </Button>
             ) : (
@@ -267,13 +303,17 @@ export function LineTab({ line }: { line: LineInfo }) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Label htmlFor="line-webhook-url" className="sr-only">
+              Webhook URL
+            </Label>
             <Input
+              id="line-webhook-url"
               value={line.webhookUrl}
               readOnly
               className="bg-gray-50 font-mono text-xs sm:text-sm"
             />
             <Button variant="outline" onClick={copyWebhookUrl} className="shrink-0">
-              <Copy />
+              <Copy aria-hidden="true" />
               コピー
             </Button>
           </div>
@@ -328,7 +368,7 @@ export function LineTab({ line }: { line: LineInfo }) {
                 </div>
                 <div>
                   <Button onClick={sendTest} disabled={!testCustomerId || testing}>
-                    <Send />
+                    <Send aria-hidden="true" />
                     {testing ? "送信中…" : "テストを送信"}
                   </Button>
                 </div>
@@ -347,7 +387,9 @@ export function LineTab({ line }: { line: LineInfo }) {
         <CardContent>
           <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-gray-700">
             <li>LINE DevelopersでMessaging APIチャネルを作成します。</li>
-            <li>Channel Access Token（長期）とChannel Secretを取得し、上のフォームで保存します。</li>
+            <li>
+              チャネルアクセストークン（長期）とチャネルシークレットを取得し、上のフォームで保存します。
+            </li>
             <li>上記のWebhook URLをチャネルのWebhook設定に登録し、Webhookを有効化します。</li>
             <li>LINE公式アカウントの応答メッセージをオフにします。</li>
           </ol>
@@ -357,7 +399,7 @@ export function LineTab({ line }: { line: LineInfo }) {
             rel="noreferrer"
             className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline"
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
             LINE Developersを開く
           </a>
         </CardContent>
@@ -369,7 +411,7 @@ export function LineTab({ line }: { line: LineInfo }) {
           <DialogHeader>
             <DialogTitle>連携を解除</DialogTitle>
             <DialogDescription>
-              Channel Access TokenとChannel Secretを削除し、デモモードに戻ります。メッセージは実送信されなくなりますが、よろしいですか？
+              保存済みのチャネルアクセストークンとチャネルシークレットを削除し、デモモードに戻ります。以後、予約確認・リマインドなどのメッセージはお客様のLINEへ届かなくなり、履歴への記録のみになります。設定内容は後から入力し直すことで再開できます。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

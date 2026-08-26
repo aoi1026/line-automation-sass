@@ -120,7 +120,7 @@ export function TemplateCard({
             checked={template.enabled}
             disabled={toggling}
             onCheckedChange={handleToggle}
-            aria-label="テンプレートを有効にする"
+            aria-label={`テンプレート「${template.name}」を有効にする`}
           />
         </div>
 
@@ -128,19 +128,42 @@ export function TemplateCard({
           {template.content}
         </p>
 
+        <p className="text-xs text-gray-400">
+          {template.enabled ? "自動配信で選択できます" : "無効のため自動配信では選択できません"}
+        </p>
+
         <p className="text-xs text-gray-400">更新日: {template.updatedLabel}</p>
 
-        <div className="mt-auto flex items-center gap-2 pt-1">
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            <Pencil />
+        <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-11"
+            onClick={() => setEditOpen(true)}
+            aria-label={`テンプレート「${template.name}」を編集`}
+          >
+            <Pencil aria-hidden="true" />
             編集
           </Button>
-          <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={duplicating}>
-            <Copy />
-            複製
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-11"
+            onClick={handleDuplicate}
+            disabled={duplicating}
+            aria-label={`テンプレート「${template.name}」を複製`}
+          >
+            <Copy aria-hidden="true" />
+            {duplicating ? "複製中…" : "複製"}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)}>
-            <Trash2 />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={() => setDeleteOpen(true)}
+            aria-label={`テンプレート「${template.name}」を削除`}
+          >
+            <Trash2 aria-hidden="true" />
             削除
           </Button>
         </div>
@@ -163,7 +186,11 @@ export function TemplateCard({
           <DialogHeader>
             <DialogTitle>テンプレートを削除</DialogTitle>
             <DialogDescription>
-              「{template.name}」を削除しますか？自動配信で使用中の場合は標準文面に戻ります。この操作は取り消せません。
+              「{template.name}」を削除します。
+              {template.usedByAutomation
+                ? "この文面を使用している自動配信は、以後リピナビの標準文面で送信されます。"
+                : "作成した文面は元に戻せません。"}
+              この操作は取り消せません。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

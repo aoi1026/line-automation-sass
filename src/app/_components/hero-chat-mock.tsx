@@ -114,15 +114,15 @@ function Bubble({ message }: { message: MockMessage }) {
 /** ヒーロー右側に置くLINEトーク風の配信イメージ */
 export function HeroChatMock() {
   return (
-    <div className="relative mx-auto w-full max-w-sm">
+    <figure className="relative mx-auto w-full max-w-sm">
       <div
-        aria-hidden
+        aria-hidden="true"
         className="absolute -inset-3 rounded-[2.5rem] bg-brand/10 blur-2xl"
       />
       <div className="relative overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-xl shadow-gray-900/10">
         <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-light text-brand-dark">
-            <MessageCircleHeart className="h-5 w-5" />
+            <MessageCircleHeart aria-hidden="true" className="h-5 w-5" />
           </span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold text-gray-900">
@@ -131,7 +131,7 @@ export function HeroChatMock() {
             <span className="block text-[11px] text-gray-400">LINE公式アカウント</span>
           </span>
           <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-light px-2 py-1 text-[10px] font-medium text-brand-dark">
-            <Zap className="h-3 w-3" />
+            <Zap aria-hidden="true" className="h-3 w-3" />
             自動配信
           </span>
         </div>
@@ -150,9 +150,9 @@ export function HeroChatMock() {
           )}
         </div>
       </div>
-      <p className="mt-3 text-center text-xs text-gray-500">
+      <figcaption className="mt-3 text-center text-xs leading-relaxed text-gray-500">
         ※ 配信イメージです。文面はテンプレートで自由に編集できます。
-      </p>
-    </div>
+      </figcaption>
+    </figure>
   );
 }

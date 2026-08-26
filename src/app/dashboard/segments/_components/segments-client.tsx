@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Copy, Filter, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { SegmentRules } from "@/lib/segments";
+import { formatNumber } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -84,7 +85,7 @@ export function SegmentsClient({
         description="来店状況やタグでお客様を絞り込む条件を管理します。キャンペーンの配信対象に使えます。"
         actions={
           <Button onClick={openCreate}>
-            <Plus />
+            <Plus aria-hidden="true" />
             セグメントを作成
           </Button>
         }
@@ -92,12 +93,12 @@ export function SegmentsClient({
 
       {segments.length === 0 ? (
         <EmptyState
-          icon={<Filter />}
+          icon={<Filter aria-hidden="true" />}
           title="セグメントがまだありません"
-          description="「最終来店から60日以上」などの条件で顧客を抽出できます。作成したセグメントはキャンペーンの配信対象に指定できます。"
+          description="「最終来店から60日以上」などの条件でお客様を抽出できます。まずは、しばらくご来店のないお客様のセグメントを作ってみましょう。作成したセグメントはキャンペーンの配信対象に指定できます。"
           action={
             <Button onClick={openCreate}>
-              <Plus />
+              <Plus aria-hidden="true" />
               セグメントを作成
             </Button>
           }
@@ -123,27 +124,33 @@ export function SegmentsClient({
                       {item.description}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">
-                        {item.targetCount.toLocaleString("ja-JP")}人
-                      </Badge>
+                      <Badge variant="secondary">{formatNumber(item.targetCount)}人</Badge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-gray-500">
                       {item.updatedAtLabel}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-                          <Pencil />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-11"
+                          onClick={() => openEdit(item)}
+                          aria-label={`セグメント「${item.name}」を編集`}
+                        >
+                          <Pencil aria-hidden="true" />
                           編集
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-11"
                           onClick={() => handleDuplicate(item)}
                           disabled={duplicatingId === item.id}
+                          aria-label={`セグメント「${item.name}」を複製`}
                         >
-                          <Copy />
-                          複製
+                          <Copy aria-hidden="true" />
+                          {duplicatingId === item.id ? "複製中…" : "複製"}
                         </Button>
                         <DeleteSegmentButton id={item.id} name={item.name} />
                       </div>

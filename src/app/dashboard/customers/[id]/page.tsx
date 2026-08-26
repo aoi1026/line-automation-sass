@@ -4,11 +4,10 @@ import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { GENDER_LABELS } from "@/lib/constants";
 import { formatJstDate, formatJstDateTime, jstYmd } from "@/lib/jst";
-import { formatYen } from "@/lib/utils";
+import { formatNumber, formatYen } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { StatCard } from "@/components/ui/stat-card";
 import { KarteSection, type KarteRow } from "./_components/karte-section";
 import type { StaffOption } from "./_components/karte-form-dialog";
 import { NextNoteCard } from "./_components/next-note-card";
@@ -25,8 +24,18 @@ export const metadata: Metadata = { title: "顧客詳細" };
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span className="shrink-0 text-xs text-gray-500">{label}</span>
-      <span className="min-w-0 break-words text-right text-sm text-gray-900">{value}</span>
+      <dt className="shrink-0 text-xs text-gray-500">{label}</dt>
+      <dd className="min-w-0 break-words text-right text-sm text-gray-900">{value}</dd>
+    </div>
+  );
+}
+
+/** 来店状況の数値タイル（カード内に置くため、StatCardではなく素の枠で表示する） */
+function StatTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+      <p className="text-xs font-medium text-gray-500">{label}</p>
+      <p className="mt-1 text-base font-bold tabular-nums text-gray-900">{value}</p>
     </div>
   );
 }
@@ -136,7 +145,7 @@ export default async function CustomerDetailPage({
               }}
               trigger={
                 <Button variant="outline">
-                  <Pencil />
+                  <Pencil aria-hidden="true" />
                   編集
                 </Button>
               }
@@ -147,7 +156,7 @@ export default async function CustomerDetailPage({
               linked={linked}
               trigger={
                 <Button>
-                  <Send />
+                  <Send aria-hidden="true" />
                   メッセージを送信
                 </Button>
               }
@@ -169,19 +178,23 @@ export default async function CustomerDetailPage({
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>基本情報</CardTitle>
+            <CardTitle role="heading" aria-level={2}>
+              基本情報
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <InfoRow label="電話" value={customer.phone || "-"} />
-            <InfoRow label="メール" value={customer.email || "-"} />
-            <InfoRow label="性別" value={GENDER_LABELS[customer.gender] ?? GENDER_LABELS[""]} />
-            <InfoRow
-              label="誕生日"
-              value={customer.birthday ? formatJstDate(customer.birthday) : "-"}
-            />
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs text-gray-500">タグ</span>
+            <dl className="space-y-3">
+              <InfoRow label="電話" value={customer.phone || "未登録"} />
+              <InfoRow label="メール" value={customer.email || "未登録"} />
+              <InfoRow label="性別" value={GENDER_LABELS[customer.gender] ?? GENDER_LABELS[""]} />
+              <InfoRow
+                label="誕生日"
+                value={customer.birthday ? formatJstDate(customer.birthday) : "未登録"}
+              />
+            </dl>
+            <div className="border-t border-gray-100 pt-3">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <h3 className="text-xs font-medium text-gray-500">タグ</h3>
                 <TagsPopover
                   customerId={customer.id}
                   storeTags={storeTags.map((t) => ({ id: t.id, name: t.name, color: t.color }))}
@@ -190,7 +203,7 @@ export default async function CustomerDetailPage({
               </div>
               <div className="flex flex-wrap justify-end gap-1">
                 {customer.tags.length === 0 ? (
-                  <span className="text-sm text-gray-400">なし</span>
+                  <span className="text-sm text-gray-400">タグはまだありません</span>
                 ) : (
                   customer.tags.map(({ tag }) => (
                     <span
@@ -204,30 +217,34 @@ export default async function CustomerDetailPage({
                 )}
               </div>
             </div>
-            <div>
-              <p className="text-xs text-gray-500">メモ</p>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-gray-900">
-                {customer.notes || "-"}
+            <div className="border-t border-gray-100 pt-3">
+              <h3 className="text-xs font-medium text-gray-500">メモ</h3>
+              <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-900">
+                {customer.notes || "メモはまだありません"}
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <div>
-          <h2 className="mb-2 text-sm font-semibold text-gray-700">来店状況</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard label="来店回数" value={`${customer.visitCount}回`} />
-            <StatCard label="累計利用額" value={formatYen(customer.totalSpent)} />
-            <StatCard
+        <Card>
+          <CardHeader>
+            <CardTitle role="heading" aria-level={2}>
+              来店状況
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <StatTile label="来店回数" value={`${formatNumber(customer.visitCount)}回`} />
+            <StatTile label="累計利用額" value={formatYen(customer.totalSpent)} />
+            <StatTile
               label="初回来店"
-              value={customer.firstVisitAt ? formatJstDate(customer.firstVisitAt) : "-"}
+              value={customer.firstVisitAt ? formatJstDate(customer.firstVisitAt) : "記録なし"}
             />
-            <StatCard
+            <StatTile
               label="最終来店"
-              value={customer.lastVisitAt ? formatJstDate(customer.lastVisitAt) : "-"}
+              value={customer.lastVisitAt ? formatJstDate(customer.lastVisitAt) : "記録なし"}
             />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         <LineLinkCard
           customerId={customer.id}
@@ -250,7 +267,15 @@ export default async function CustomerDetailPage({
         />
       </div>
 
-      <CustomerTabs reservations={reservationRows} messageLogs={messageLogRows} />
+      <section aria-labelledby="customer-history-heading">
+        <h2
+          id="customer-history-heading"
+          className="mb-3 text-base font-semibold tracking-tight text-gray-900"
+        >
+          ご利用履歴
+        </h2>
+        <CustomerTabs reservations={reservationRows} messageLogs={messageLogRows} />
+      </section>
     </>
   );
 }

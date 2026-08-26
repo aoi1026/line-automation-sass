@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Users } from "lucide-react";
 import { toast } from "sonner";
 import type { SegmentRules } from "@/lib/segments";
+import { formatNumber } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -41,6 +42,7 @@ export function SegmentFormDialog({
   const router = useRouter();
   const [name, setName] = React.useState("");
   const [rules, setRules] = React.useState<SegmentRules>({});
+  const [nameError, setNameError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [count, setCount] = React.useState<number | null>(null);
   const [counting, setCounting] = React.useState(false);
@@ -50,6 +52,7 @@ export function SegmentFormDialog({
     if (open) {
       setName(segment?.name ?? "");
       setRules(segment?.rules ?? {});
+      setNameError(null);
       setCount(null);
     }
   }, [open, segment]);
@@ -79,9 +82,11 @@ export function SegmentFormDialog({
 
   async function handleSave() {
     if (!name.trim()) {
+      setNameError("セグメント名を入力してください");
       toast.error("セグメント名を入力してください");
       return;
     }
+    setNameError(null);
     setSaving(true);
     try {
       const res = await fetch(segment ? `/api/segments/${segment.id}` : "/api/segments", {
@@ -114,30 +119,57 @@ export function SegmentFormDialog({
 
         <div className="space-y-5">
           <div className="space-y-1.5">
-            <Label htmlFor="segment-name">セグメント名</Label>
+            <Label htmlFor="segment-name">
+              セグメント名
+              <span className="ml-0.5 text-red-500" aria-hidden="true">
+                *
+              </span>
+            </Label>
             <Input
               id="segment-name"
               placeholder="例: 離脱しかけのお客様"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (nameError) setNameError(null);
+              }}
+              required
+              aria-required="true"
+              aria-invalid={nameError ? true : undefined}
+              aria-describedby={
+                nameError ? "segment-name-error segment-name-help" : "segment-name-help"
+              }
             />
+            {nameError && (
+              <p id="segment-name-error" role="alert" className="text-xs text-red-600">
+                {nameError}
+              </p>
+            )}
+            <p id="segment-name-help" className="text-xs text-gray-500">
+              管理用の名前です。お客様には表示されません。
+            </p>
           </div>
 
-          <RuleBuilder value={rules} onChange={setRules} tags={tags} />
+          <RuleBuilder value={rules} onChange={setRules} tags={tags} idPrefix="segment-rule" />
 
-          <div className="flex items-center gap-2 rounded-lg bg-brand/5 px-4 py-3 text-sm">
-            <Users className="h-4 w-4 text-brand" />
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-2 rounded-lg bg-brand/5 px-4 py-3 text-sm"
+          >
+            <Users className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
             {counting ? (
               <span className="flex items-center gap-2 text-gray-500">
                 <Spinner className="h-4 w-4" />
-                対象人数を計算しています…
+                対象人数を計算中…
               </span>
             ) : count !== null ? (
               <span className="text-gray-700">
-                対象: <span className="font-bold text-brand-dark">{count.toLocaleString("ja-JP")}</span> 人
+                対象:{" "}
+                <span className="font-bold text-brand-dark">{formatNumber(count)}</span> 人
               </span>
             ) : (
-              <span className="text-gray-500">対象: －</span>
+              <span className="text-gray-500">条件を入力すると対象人数が表示されます</span>
             )}
           </div>
         </div>

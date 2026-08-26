@@ -21,12 +21,18 @@ export default async function SignupPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-brand-light via-white to-gray-50 px-4 py-12">
+      <h1 className="sr-only">リピナビ 店舗登録</h1>
+
       <div className="mb-8 flex flex-col items-center gap-2">
-        <div className="flex items-center gap-2">
-          <MessageCircleHeart className="h-9 w-9 text-brand" />
+        <Link
+          href="/"
+          aria-label="リピナビ トップページへ"
+          className="flex items-center gap-2 rounded-lg px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+        >
+          <MessageCircleHeart aria-hidden="true" className="h-9 w-9 shrink-0 text-brand" />
           <span className="text-3xl font-bold tracking-tight text-gray-900">{APP_NAME}</span>
-        </div>
-        <p className="text-sm text-gray-500">{APP_TAGLINE}</p>
+        </Link>
+        <p className="text-center text-sm text-gray-500">{APP_TAGLINE}</p>
       </div>
 
       <Card className="w-full max-w-md">
@@ -43,7 +49,7 @@ export default async function SignupPage() {
 
       <p className="mt-6 text-sm text-gray-600">
         すでにアカウントをお持ちの方は{" "}
-        <Link href="/login" className="font-medium text-brand-dark hover:underline">
+        <Link href="/login" className="rounded font-medium text-brand-dark underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
           ログインはこちら
         </Link>
       </p>

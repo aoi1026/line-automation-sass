@@ -27,9 +27,9 @@ import type { CalendarBlock } from "./types";
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex items-start gap-3 sm:gap-4">
       <dt className="w-20 shrink-0 text-gray-500">{label}</dt>
-      <dd className="flex-1 text-gray-900">{children}</dd>
+      <dd className="min-w-0 flex-1 break-words text-gray-900">{children}</dd>
     </div>
   );
 }
@@ -109,7 +109,7 @@ export function ReservationDetailDialog({
                 href={`/dashboard/reservations/${block.id}`}
                 className={buttonVariants({ variant: "outline" })}
               >
-                <ExternalLink />
+                <ExternalLink aria-hidden="true" />
                 詳細ページを開く
               </Link>
               {block.status === "PENDING" && (
@@ -118,7 +118,7 @@ export function ReservationDetailDialog({
                   disabled={submitting}
                   onClick={() => void changeStatus("CONFIRMED", "予約を確定しました")}
                 >
-                  確定する
+                  {submitting ? "処理中…" : "確定する"}
                 </Button>
               )}
               {(block.status === "PENDING" || block.status === "CONFIRMED") && (
@@ -126,7 +126,7 @@ export function ReservationDetailDialog({
                   disabled={submitting}
                   onClick={() => void changeStatus("COMPLETED", "来店済みにしました")}
                 >
-                  来店済みにする
+                  {submitting ? "処理中…" : "来店済みにする"}
                 </Button>
               )}
             </DialogFooter>

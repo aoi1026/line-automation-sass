@@ -24,13 +24,13 @@ export function QrCard() {
             <p className="text-sm text-gray-600">
               店頭やショップカードに掲示して、お客様にWeb予約をご案内いただけます。
             </p>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <a
                 href="/api/qr?type=booking"
                 download="予約QRコード.png"
                 className={buttonVariants({ variant: "outline" })}
               >
-                <Download />
+                <Download aria-hidden="true" />
                 画像をダウンロード
               </a>
               <a
@@ -39,7 +39,7 @@ export function QrCard() {
                 rel="noreferrer"
                 className={buttonVariants({ variant: "outline" })}
               >
-                <Printer />
+                <Printer aria-hidden="true" />
                 印刷用ページを開く
               </a>
             </div>

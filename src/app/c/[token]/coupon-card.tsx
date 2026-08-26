@@ -25,6 +25,29 @@ function formatValidUntil(validUntil: Date | null): string {
 
 type CouponStatus = "active" | "used" | "expired" | "inactive" | "upcoming";
 
+/** 状態ごとの案内バナー（利用できない理由を最初に伝える） */
+const STATUS_NOTICE: Record<
+  Exclude<CouponStatus, "active">,
+  { text: string; className: string }
+> = {
+  used: {
+    text: "このクーポンは使用済みです",
+    className: "border-gray-300 bg-gray-100 text-gray-700",
+  },
+  expired: {
+    text: "このクーポンは有効期限が過ぎています",
+    className: "border-red-200 bg-red-50 text-red-700",
+  },
+  upcoming: {
+    text: "このクーポンはまだご利用いただけません",
+    className: "border-amber-200 bg-amber-50 text-amber-800",
+  },
+  inactive: {
+    text: "このクーポンは現在ご利用いただけません",
+    className: "border-amber-200 bg-amber-50 text-amber-800",
+  },
+};
+
 /**
  * クーポンカード（公開ページ /c/[token] と管理画面プレビューで共通の見た目）。
  * サーバーコンポーネントとして描画可能。
@@ -67,96 +90,136 @@ export function CouponCard({
           : "active";
 
   const dimmed = status === "used" || status === "expired";
+  const notice = status === "active" ? null : STATUS_NOTICE[status];
+  const discountLabel = formatDiscount(discountType, discountValue);
+  // 20文字まで入力できるため、長いコードは折り返しつつ字間を詰めて収める
+  const codeClass =
+    code.length > 12
+      ? "text-xl tracking-[0.12em] sm:text-2xl"
+      : "text-[1.75rem] tracking-[0.2em] sm:text-3xl sm:tracking-[0.3em]";
 
   return (
     <div>
-      {status === "inactive" && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-medium text-amber-800">
-          このクーポンは現在ご利用いただけません
-        </div>
+      {notice && (
+        <p
+          className={cn(
+            "mb-4 rounded-lg border px-4 py-3 text-center text-sm font-bold leading-relaxed",
+            notice.className
+          )}
+        >
+          {notice.text}
+        </p>
       )}
 
-      <div
-        className={cn(
-          "overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-md",
-          dimmed && "opacity-70 grayscale-[0.6]"
-        )}
-      >
-        {/* 上部: ブランドグリーンのグラデーション */}
-        <div className="bg-gradient-to-br from-brand to-brand-dark px-6 pb-7 pt-5 text-center text-white">
-          <p className="text-xs font-medium text-white/80">{storeName}</p>
-          <p className="mt-4 text-5xl font-extrabold tracking-tight">
-            {formatDiscount(discountType, discountValue)}
-          </p>
-          <p className="mt-3 text-lg font-bold">{title}</p>
-          {description && (
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-white/90">
-              {description}
-            </p>
+      <div className="relative">
+        <div
+          className={cn(
+            "overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-md",
+            dimmed && "opacity-60 grayscale"
           )}
-        </div>
+        >
+          {/* 上部: ブランドグリーンのグラデーション */}
+          <div className="bg-gradient-to-br from-brand to-brand-dark px-5 pb-7 pt-5 text-center text-white sm:px-6">
+            <p className="truncate text-xs font-medium text-white/80">{storeName}</p>
+            <p className="mt-4 break-words text-4xl font-extrabold leading-none tracking-tight sm:text-5xl">
+              {discountLabel}
+            </p>
+            <p className="mt-3 text-balance text-lg font-bold leading-snug">{title}</p>
+            {description && (
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-white/90">
+                {description}
+              </p>
+            )}
+          </div>
 
-        {/* ミシン目風の区切り（チケットの切り取り線） */}
-        <div className="relative border-t-2 border-dashed border-gray-200">
-          <span className="absolute -left-3 -top-3 h-6 w-6 rounded-full bg-gray-50" />
-          <span className="absolute -right-3 -top-3 h-6 w-6 rounded-full bg-gray-50" />
-        </div>
+          {/* ミシン目風の区切り（チケットの切り取り線） */}
+          <div className="relative border-t-2 border-dashed border-gray-200">
+            <span aria-hidden="true" className="absolute -left-3 -top-3 h-6 w-6 rounded-full bg-gray-50" />
+            <span aria-hidden="true" className="absolute -right-3 -top-3 h-6 w-6 rounded-full bg-gray-50" />
+          </div>
 
-        {/* 下部: チケット半券 */}
-        <div className="px-6 py-5">
-          <dl className="space-y-2 text-sm">
-            {customerName && (
+          {/* 下部: チケット半券 */}
+          <div className="px-5 py-5 sm:px-6">
+            <dl className="space-y-2 text-sm">
+              {customerName && (
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="shrink-0 text-gray-500">宛名</dt>
+                  <dd className="min-w-0 break-words text-right font-medium text-gray-900">
+                    {customerName} 様
+                  </dd>
+                </div>
+              )}
               <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-gray-500">宛名</dt>
-                <dd className="font-medium text-gray-900">{customerName} 様</dd>
+                <dt className="shrink-0 text-gray-500">有効期限</dt>
+                <dd className="min-w-0 text-right font-medium text-gray-900">
+                  {formatValidUntil(validUntil)}
+                </dd>
+              </div>
+            </dl>
+
+            {code && (
+              <div className="mt-4">
+                <p className="text-center text-xs font-medium text-gray-500">店頭確認コード</p>
+                <p
+                  className={cn(
+                    "mt-1.5 break-all rounded-lg border-2 border-dashed border-brand/50 bg-brand-light/50 px-2 py-3 text-center font-mono font-bold text-brand-dark",
+                    codeClass
+                  )}
+                >
+                  {code}
+                </p>
               </div>
             )}
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="text-gray-500">有効期限</dt>
-              <dd className="font-medium text-gray-900">{formatValidUntil(validUntil)}</dd>
-            </div>
-          </dl>
 
-          {code && (
-            <div className="mt-4">
-              <p className="text-center text-xs font-medium text-gray-500">店頭確認コード</p>
-              <p className="mt-1.5 rounded-lg border-2 border-dashed border-brand/50 bg-brand-light/50 py-3 text-center font-mono text-2xl font-bold tracking-[0.3em] text-brand-dark">
-                {code}
-              </p>
+            <div className="mt-4 flex flex-col items-center gap-1.5 text-center">
+              {status === "active" && <Badge>有効</Badge>}
+              {status === "used" && <Badge variant="secondary">使用済み</Badge>}
+              {status === "expired" && (
+                <Badge variant="outline" className="border-red-300 text-red-600">
+                  期限切れ
+                </Badge>
+              )}
+              {status === "inactive" && <Badge variant="outline">無効</Badge>}
+              {status === "upcoming" && (
+                <Badge variant="outline" className="border-amber-300 text-amber-700">
+                  利用開始前
+                </Badge>
+              )}
+              {status === "upcoming" && validFrom && (
+                <p className="text-xs text-gray-500">
+                  {formatJstDate(validFrom)}からご利用いただけます
+                </p>
+              )}
+
+              {status === "used" && usedAt && (
+                <p className="text-xs text-gray-500">利用日: {formatJstDate(usedAt)}</p>
+              )}
+            </div>
+          </div>
+
+          {/* 案内 */}
+          {status === "active" && (
+            <div className="border-t border-gray-100 bg-gray-50 px-5 py-3 text-center text-xs leading-relaxed text-gray-600">
+              ご来店時にこの画面をスタッフにご提示ください
             </div>
           )}
-
-          <div className="mt-4 flex flex-col items-center gap-1.5 text-center">
-            {status === "active" && <Badge>有効</Badge>}
-            {status === "used" && <Badge variant="secondary">使用済み</Badge>}
-            {status === "expired" && (
-              <Badge variant="outline" className="border-red-300 text-red-600">
-                期限切れ
-              </Badge>
-            )}
-            {status === "inactive" && <Badge variant="outline">無効</Badge>}
-            {status === "upcoming" && (
-              <Badge variant="outline" className="border-amber-300 text-amber-700">
-                利用開始前
-              </Badge>
-            )}
-            {status === "upcoming" && validFrom && (
-              <p className="text-xs text-gray-500">
-                {formatJstDate(validFrom)}からご利用いただけます
-              </p>
-            )}
-
-            {status === "used" && usedAt && (
-              <p className="text-xs text-gray-500">利用日: {formatJstDate(usedAt)}</p>
-            )}
-          </div>
         </div>
 
-        {/* 案内 */}
-        {status === "active" && (
-          <div className="border-t border-gray-100 bg-gray-50 px-5 py-3 text-center text-xs text-gray-600">
-            ご来店時にこの画面をスタッフにご提示ください
-          </div>
+        {/* 使用済み・期限切れは遠目でも分かるようにスタンプを重ねる */}
+        {dimmed && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          >
+            <span
+              className={cn(
+                "-rotate-12 rounded-xl border-4 bg-white/85 px-6 py-2 text-3xl font-extrabold tracking-widest shadow-sm",
+                status === "used" ? "border-gray-500 text-gray-600" : "border-red-500 text-red-600"
+              )}
+            >
+              {status === "used" ? "使用済み" : "期限切れ"}
+            </span>
+          </span>
         )}
       </div>
     </div>

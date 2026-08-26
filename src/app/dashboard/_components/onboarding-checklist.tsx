@@ -62,7 +62,7 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
       <CardHeader className="flex-row items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
-            <Rocket className="h-5 w-5" />
+            <Rocket aria-hidden="true" className="h-5 w-5" />
           </div>
           <div>
             <CardTitle>セットアップガイド</CardTitle>
@@ -105,9 +105,9 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
           {steps.map((step) => (
             <li key={step.key} className="flex items-center gap-3 px-4 py-3">
               {step.done ? (
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+                <CheckCircle2 aria-hidden="true" className="h-5 w-5 shrink-0 text-emerald-500" />
               ) : (
-                <Circle className="h-5 w-5 shrink-0 text-gray-300" />
+                <Circle aria-hidden="true" className="h-5 w-5 shrink-0 text-gray-300" />
               )}
               <div className="min-w-0 flex-1">
                 <p
@@ -141,9 +141,9 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
           href="/dashboard/setup"
           className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-brand-dark hover:underline"
         >
-          <BookOpen className="h-4 w-4" />
+          <BookOpen aria-hidden="true" className="h-4 w-4" />
           詳しいセットアップガイド
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight aria-hidden="true" className="h-4 w-4" />
         </Link>
       </CardContent>
     </Card>

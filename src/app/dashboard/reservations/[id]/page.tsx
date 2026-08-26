@@ -33,9 +33,9 @@ export const metadata: Metadata = { title: "予約詳細" };
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-4">
-      <dt className="w-28 shrink-0 text-gray-500">{label}</dt>
-      <dd className="flex-1 text-gray-900">{children}</dd>
+    <div className="flex items-start gap-3 sm:gap-4">
+      <dt className="w-24 shrink-0 text-gray-500 sm:w-28">{label}</dt>
+      <dd className="min-w-0 flex-1 break-words text-gray-900">{children}</dd>
     </div>
   );
 }
@@ -104,7 +104,7 @@ export default async function ReservationDetailPage({
         title="予約詳細"
         description={`${reservation.customer.name}様 / ${formatJstDateTime(reservation.startAt)}`}
         actions={
-          <>
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/dashboard/reservations?date=${jstYmd(reservation.startAt)}`}
               className={buttonVariants({ variant: "outline" })}
@@ -112,7 +112,7 @@ export default async function ReservationDetailPage({
               一覧へ戻る
             </Link>
             <DeleteReservationButton id={reservation.id} />
-          </>
+          </div>
         }
       />
 
@@ -120,7 +120,7 @@ export default async function ReservationDetailPage({
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>予約情報</CardTitle>
+              <CardTitle role="heading" aria-level={2}>予約情報</CardTitle>
             </CardHeader>
             <CardContent>
               <dl className="space-y-3 text-sm">
@@ -170,7 +170,7 @@ export default async function ReservationDetailPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>ステータス操作</CardTitle>
+              <CardTitle role="heading" aria-level={2}>ステータス操作</CardTitle>
               <CardDescription>
                 来店済みにすると、顧客の来店回数・累計利用額が更新されます。
               </CardDescription>
@@ -211,7 +211,7 @@ export default async function ReservationDetailPage({
           {reservation.messageLogs.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>送信済みメッセージ</CardTitle>
+                <CardTitle role="heading" aria-level={2}>送信済みメッセージ</CardTitle>
                 <CardDescription>
                   この予約に関して送信されたメッセージの履歴です。
                 </CardDescription>
@@ -232,7 +232,7 @@ export default async function ReservationDetailPage({
                       <Badge className={MESSAGE_STATUS_COLORS[log.status]}>
                         {MESSAGE_STATUS_LABELS[log.status]}
                       </Badge>
-                      <span className="text-gray-500">
+                      <span className="tabular-nums text-gray-500">
                         {formatJstDateTime(log.sentAt)}
                       </span>
                     </li>
@@ -245,7 +245,7 @@ export default async function ReservationDetailPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>予約内容の編集</CardTitle>
+            <CardTitle role="heading" aria-level={2}>予約内容の編集</CardTitle>
             <CardDescription>
               日時を変更すると、自動配信が有効な場合はお客様に変更通知が送信されます。
             </CardDescription>

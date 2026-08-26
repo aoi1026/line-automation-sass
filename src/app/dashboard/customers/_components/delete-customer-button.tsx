@@ -50,8 +50,8 @@ export function DeleteCustomerButton({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">
-          <Trash2 />
+        <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
+          <Trash2 aria-hidden="true" />
           削除
         </Button>
       </DialogTrigger>
@@ -69,7 +69,7 @@ export function DeleteCustomerButton({
             </Button>
           </DialogClose>
           <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleting}>
-            {deleting ? "削除中..." : "削除する"}
+            {deleting ? "削除中…" : "削除する"}
           </Button>
         </DialogFooter>
       </DialogContent>

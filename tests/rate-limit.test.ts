@@ -105,11 +105,34 @@ describe("rateLimit", () => {
 });
 
 describe("getClientIp", () => {
-  it("x-forwarded-for の先頭のIPを返す", () => {
+  it("x-forwarded-for は末尾（自分のプロキシが観測した接続元）を返す", () => {
+    // 先頭はクライアントが自由に詐称できるため信用しない。
+    // nginx の $proxy_add_x_forwarded_for は実際の接続元を末尾に追加する。
     const req = new Request("https://example.com", {
       headers: { "x-forwarded-for": "203.0.113.9, 70.41.3.18" },
     });
-    expect(getClientIp(req)).toBe("203.0.113.9");
+    expect(getClientIp(req)).toBe("70.41.3.18");
+  });
+
+  it("偽装した x-forwarded-for を先頭に足してもレート制限を回避できない", () => {
+    // 攻撃者が毎回異なるIPを先頭に詐称しても、実際の接続元は変わらないので
+    // 同じバケットに集計される
+    const ipOf = (spoofed: string) =>
+      getClientIp(
+        new Request("https://example.com", {
+          headers: { "x-forwarded-for": `${spoofed}, 70.41.3.18` },
+        })
+      );
+    expect(ipOf("1.1.1.1")).toBe("70.41.3.18");
+    expect(ipOf("2.2.2.2")).toBe("70.41.3.18");
+    expect(ipOf("3.3.3.3")).toBe("70.41.3.18");
+  });
+
+  it("単一のIPだけならそのIPを返す", () => {
+    const req = new Request("https://example.com", {
+      headers: { "x-forwarded-for": "198.51.100.20" },
+    });
+    expect(getClientIp(req)).toBe("198.51.100.20");
   });
 
   it("x-forwarded-for が無ければ x-real-ip を返す", () => {

@@ -83,7 +83,7 @@ export function TagManageDialog({ tags }: { tags: TagOption[] }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button type="button" variant="outline">
-          <Tags />
+          <Tags aria-hidden="true" />
           タグを管理
         </Button>
       </DialogTrigger>
@@ -97,32 +97,34 @@ export function TagManageDialog({ tags }: { tags: TagOption[] }) {
           <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
             {list.map((tag) => (
               <li key={tag.id} className="flex items-center justify-between gap-2 px-3 py-2">
-                <span className="flex items-center gap-2 text-sm text-gray-700">
+                <span className="flex min-w-0 items-center gap-2 text-sm text-gray-700">
                   <span
+                    aria-hidden="true"
                     className="h-3 w-3 shrink-0 rounded-full"
                     style={{ backgroundColor: tag.color }}
                   />
-                  {tag.name}
+                  <span className="truncate">{tag.name}</span>
                 </span>
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  className="text-red-600 hover:bg-red-50"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 text-red-600 hover:bg-red-50"
+                  aria-label={`タグ「${tag.name}」を削除`}
                   onClick={() => void handleDelete(tag)}
                   disabled={deletingId === tag.id}
                 >
-                  <Trash2 />
+                  <Trash2 aria-hidden="true" />
                 </Button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-gray-400">タグがまだありません。</p>
+          <p className="text-sm text-gray-500">タグがまだありません。下の入力欄から最初のタグを作成してください。</p>
         )}
 
-        <div className="flex items-end gap-2 border-t border-gray-100 pt-4">
-          <div className="flex-1 space-y-1.5">
+        <div className="flex flex-wrap items-end gap-2 border-t border-gray-100 pt-4">
+          <div className="min-w-[8rem] flex-1 space-y-1.5">
             <Label htmlFor="tag-name">新しいタグ名</Label>
             <Input
               id="tag-name"
@@ -147,9 +149,13 @@ export function TagManageDialog({ tags }: { tags: TagOption[] }) {
               className="h-10 w-12 cursor-pointer rounded-lg border border-gray-300 p-1"
             />
           </div>
-          <Button type="button" onClick={() => void handleAdd()} disabled={saving || !name.trim()}>
-            <Plus />
-            追加
+          <Button
+            type="button"
+            onClick={() => void handleAdd()}
+            disabled={saving || !name.trim()}
+          >
+            <Plus aria-hidden="true" />
+            {saving ? "追加中…" : "追加"}
           </Button>
         </div>
 

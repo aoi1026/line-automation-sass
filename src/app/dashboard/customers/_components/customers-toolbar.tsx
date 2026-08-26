@@ -5,10 +5,17 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { TagManageDialog, type TagOption } from "./tag-manage-dialog";
 import { CustomersExportButton } from "./customers-export-button";
 import { CustomersImportDialog } from "./customers-import-dialog";
+
+/** タグ絞り込みチップの共通クラス */
+const CHIP_CLASS =
+  "inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+const CHIP_ON = "border-brand bg-brand/10 text-brand-dark";
+const CHIP_OFF = "border-gray-200 text-gray-500 hover:bg-gray-50";
 
 /** 顧客一覧の検索・タグ絞り込みツールバー */
 export function CustomersToolbar({
@@ -41,9 +48,17 @@ export function CustomersToolbar({
           apply(q, initialTag);
         }}
       >
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <div className="relative min-w-0 flex-1">
+          <Label htmlFor="customers-search" className="sr-only">
+            お客様を検索
+          </Label>
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+          />
           <Input
+            id="customers-search"
+            type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="名前・かな・電話番号で検索"
@@ -62,16 +77,12 @@ export function CustomersToolbar({
       </form>
 
       {tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="タグで絞り込み">
           <button
             type="button"
             onClick={() => apply(q, "")}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-              !initialTag
-                ? "border-brand bg-brand/10 text-brand-dark"
-                : "border-gray-200 text-gray-500 hover:bg-gray-50"
-            )}
+            aria-pressed={!initialTag}
+            className={cn(CHIP_CLASS, !initialTag ? CHIP_ON : CHIP_OFF)}
           >
             すべて
           </button>
@@ -80,14 +91,14 @@ export function CustomersToolbar({
               key={tag.id}
               type="button"
               onClick={() => apply(q, tag.id)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-                initialTag === tag.id
-                  ? "border-brand bg-brand/10 text-brand-dark"
-                  : "border-gray-200 text-gray-500 hover:bg-gray-50"
-              )}
+              aria-pressed={initialTag === tag.id}
+              className={cn(CHIP_CLASS, initialTag === tag.id ? CHIP_ON : CHIP_OFF)}
             >
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />
+              <span
+                aria-hidden="true"
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: tag.color }}
+              />
               {tag.name}
             </button>
           ))}

@@ -11,7 +11,7 @@ export function CreateTemplateButton({ storeName }: { storeName: string }) {
   return (
     <>
       <Button onClick={() => setOpen(true)}>
-        <Plus />
+        <Plus aria-hidden="true" />
         テンプレートを作成
       </Button>
       <TemplateFormDialog open={open} onOpenChange={setOpen} storeName={storeName} />

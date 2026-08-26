@@ -16,6 +16,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 
+const REASON_MAX = 500;
+
 export function CancelSection({ token }: { token: string }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -51,13 +53,13 @@ export function CancelSection({ token }: { token: string }) {
       <Button
         variant="outline"
         size="lg"
-        className="w-full border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+        className="w-full border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 focus-visible:ring-red-400/50"
         onClick={() => setOpen(true)}
       >
         予約をキャンセル
       </Button>
-      <p className="mt-2 text-center text-xs text-gray-400">
-        ご都合が悪くなられた場合は、こちらからキャンセルいただけます
+      <p className="mt-2 text-center text-xs leading-relaxed text-gray-500">
+        タップすると確認画面が開きます。この時点ではまだキャンセルされません。
       </p>
 
       <Dialog open={open} onOpenChange={(v) => !loading && setOpen(v)}>
@@ -77,19 +79,30 @@ export function CancelSection({ token }: { token: string }) {
               onChange={(e) => setReason(e.target.value)}
               placeholder="ご都合など、差し支えなければお聞かせください"
               rows={3}
+              maxLength={REASON_MAX}
               disabled={loading}
+              aria-describedby="cancel-reason-hint"
             />
+            <p id="cancel-reason-hint" className="text-xs text-gray-500">
+              {REASON_MAX}文字以内。未入力のままでもキャンセルいただけます。
+            </p>
           </div>
 
           <DialogFooter>
             <Button
               variant="outline"
+              className="min-h-[44px]"
               onClick={() => setOpen(false)}
               disabled={loading}
             >
               閉じる
             </Button>
-            <Button variant="destructive" onClick={() => void cancel()} disabled={loading}>
+            <Button
+              variant="destructive"
+              className="min-h-[44px]"
+              onClick={() => void cancel()}
+              disabled={loading}
+            >
               {loading && <Spinner className="h-4 w-4 text-white" />}
               {loading ? "処理しています…" : "予約をキャンセルする"}
             </Button>

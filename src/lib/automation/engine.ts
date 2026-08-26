@@ -63,14 +63,28 @@ export async function runAutomations(opts?: {
       console.error(`[automation] 店舗「${store.name}」の自動配信でエラー:`, e);
 
       // 店舗スタッフ向けの通知（無人実行のため、失敗に気付けるようにする）。
-      // notify() は内部で例外を握りつぶすため、他店舗の処理を妨げることはない
-      await notify({
-        storeId: store.id,
-        type: "AUTOMATION_FAILED",
-        title: "自動配信のエラー",
-        body: `自動配信の処理中にエラーが発生しました。${message}`,
-        link: "/dashboard/automations",
+      //
+      // 配信エンジンは毎分実行されるため、恒久的な障害（DB接続不可など）が起きると
+      // 同じ通知が毎分積み上がって通知センターが埋まってしまう。
+      // 直近1時間に同種の未読通知があれば新規作成しない。
+      const recentFailure = await prisma.notification.findFirst({
+        where: {
+          storeId: store.id,
+          type: "AUTOMATION_FAILED",
+          createdAt: { gte: new Date(now.getTime() - 60 * 60 * 1000) },
+        },
+        select: { id: true },
       });
+      if (!recentFailure) {
+        // notify() は内部で例外を握りつぶすため、他店舗の処理を妨げることはない
+        await notify({
+          storeId: store.id,
+          type: "AUTOMATION_FAILED",
+          title: "自動配信のエラー",
+          body: `自動配信の処理中にエラーが発生しました。${message}`,
+          link: "/dashboard/automations",
+        });
+      }
     }
   }
   return summary;

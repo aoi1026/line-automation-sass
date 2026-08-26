@@ -4,6 +4,7 @@ import { getApiSession, jsonError, notFound, unauthorized } from "@/lib/api";
 import { DEFAULT_BUSINESS_HOURS, type BusinessHours } from "@/lib/constants";
 import { addDays, fromJst } from "@/lib/jst";
 import { getAvailableSlots } from "@/lib/slots";
+import { getHolidayYmds } from "@/lib/holidays";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -35,7 +36,7 @@ export async function GET(req: Request) {
   const dayStart = fromJst(date);
   const dayEnd = addDays(dayStart, 1);
 
-  const [reservations, staffCount] = await Promise.all([
+  const [reservations, staffCount, holidays] = await Promise.all([
     prisma.reservation.findMany({
       where: {
         storeId: session.storeId,
@@ -48,6 +49,7 @@ export async function GET(req: Request) {
     prisma.staffMember.count({
       where: { storeId: session.storeId, active: true },
     }),
+    getHolidayYmds(session.storeId, dayStart, dayEnd),
   ]);
 
   const raw = store.businessHours;
@@ -63,7 +65,9 @@ export async function GET(req: Request) {
     reservations,
     staffId: staffId || null,
     staffCount,
-    now: new Date(),
+    holidays,
+    // 過去日は記録の訂正用に枠を出す（未来日のみ現在時刻でのリードタイム判定を行う）
+    now: dayEnd > new Date() ? new Date() : undefined,
   });
 
   return NextResponse.json({ slots });

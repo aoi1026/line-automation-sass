@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarX2, ChevronLeft, ChevronRight } from "lucide-react";
-import { cn, formatYen } from "@/lib/utils";
+import { cn, formatNumber, formatYen } from "@/lib/utils";
 import { addDays, fromJst, jstYmd } from "@/lib/jst";
 import {
   RESERVATION_SOURCE_LABELS,
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -39,6 +41,10 @@ import {
   type WeekDay,
 } from "./types";
 
+/** 一覧内のリンクに共通のフォーカスリング */
+const LINK_FOCUS =
+  "rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+
 function shiftYmd(ymd: string, days: number): string {
   return jstYmd(addDays(fromJst(ymd, "12:00"), days));
 }
@@ -52,6 +58,7 @@ export function ReservationsView({
   pendingCount,
   dayRows,
   weekDays,
+  createAction,
 }: {
   date: string;
   todayYmd: string;
@@ -63,6 +70,8 @@ export function ReservationsView({
   pendingCount: number;
   dayRows: ReservationRow[];
   weekDays: WeekDay[];
+  /** 予約が0件のときに空状態へ出す操作（予約作成ダイアログ） */
+  createAction?: React.ReactNode;
 }) {
   const router = useRouter();
 
@@ -77,6 +86,7 @@ export function ReservationsView({
   }
 
   const stepDays = view === "week" ? 7 : 1;
+  const unit = view === "week" ? "週" : "日";
 
   return (
     <div>
@@ -86,7 +96,7 @@ export function ReservationsView({
           value={view}
           onValueChange={(v) => navigate({ view: v === "week" ? "week" : "day" })}
         >
-          <TabsList>
+          <TabsList aria-label="表示単位の切り替え">
             <TabsTrigger value="day">日別</TabsTrigger>
             <TabsTrigger value="week">週間</TabsTrigger>
           </TabsList>
@@ -94,31 +104,36 @@ export function ReservationsView({
         <Button
           variant="outline"
           size="icon"
-          aria-label={view === "week" ? "前週" : "前日"}
+          aria-label={`前の${unit}へ`}
           onClick={() => navigate({ date: shiftYmd(date, -stepDays) })}
         >
-          <ChevronLeft />
+          <ChevronLeft aria-hidden="true" />
         </Button>
-        <Input
-          type="date"
-          value={date}
-          onChange={(e) => {
-            if (e.target.value) navigate({ date: e.target.value });
-          }}
-          className="w-40"
-          aria-label="日付を選択"
-        />
+        <div className="w-36 shrink-0 sm:w-40">
+          <Label htmlFor="reservations-date" className="sr-only">
+            表示する日付
+          </Label>
+          <Input
+            id="reservations-date"
+            type="date"
+            value={date}
+            onChange={(e) => {
+              if (e.target.value) navigate({ date: e.target.value });
+            }}
+          />
+        </div>
         <Button
           variant="outline"
           size="icon"
-          aria-label={view === "week" ? "翌週" : "翌日"}
+          aria-label={`次の${unit}へ`}
           onClick={() => navigate({ date: shiftYmd(date, stepDays) })}
         >
-          <ChevronRight />
+          <ChevronRight aria-hidden="true" />
         </Button>
         <Button
           variant="outline"
-          size="sm"
+          className="h-10"
+          aria-label="今日へ移動"
           onClick={() => navigate({ date: todayYmd })}
           disabled={view === "day" && date === todayYmd}
         >
@@ -129,19 +144,23 @@ export function ReservationsView({
             <button
               type="button"
               onClick={() => navigate({ status: "PENDING" })}
-              title="未確定の予約のみ表示"
+              aria-label={`未確定の予約${formatNumber(pendingCount)}件のみ表示`}
+              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
             >
               <Badge className={RESERVATION_STATUS_COLORS.PENDING}>
-                未確定 {pendingCount}件
+                未確定 {formatNumber(pendingCount)}件
               </Badge>
             </button>
           )}
-          <div className="w-40">
+          <div className="w-36 sm:w-40">
+            <Label htmlFor="reservations-status" className="sr-only">
+              ステータスで絞り込み
+            </Label>
             <Select
               value={status}
               onValueChange={(v) => navigate({ status: v as StatusFilter })}
             >
-              <SelectTrigger aria-label="ステータスで絞り込み">
+              <SelectTrigger id="reservations-status">
                 <SelectValue placeholder="ステータス" />
               </SelectTrigger>
               <SelectContent>
@@ -159,26 +178,51 @@ export function ReservationsView({
       <p className="mb-3 text-sm font-medium text-gray-700">
         {dateLabel}の予約
         {view === "day" && dayRows.length > 0 && (
-          <span className="ml-2 text-xs font-normal text-gray-400">{dayRows.length}件</span>
+          <span className="ml-2 text-xs font-normal text-gray-400">
+            {formatNumber(dayRows.length)}件
+          </span>
         )}
       </p>
 
       {view === "day" ? (
-        <DayView rows={dayRows} />
+        <DayView rows={dayRows} status={status} createAction={createAction} />
       ) : (
-        <WeekView days={weekDays} todayYmd={todayYmd} onSelectDay={(ymd) => navigate({ date: ymd, view: "day" })} />
+        <WeekView
+          days={weekDays}
+          todayYmd={todayYmd}
+          onSelectDay={(ymd) => navigate({ date: ymd, view: "day" })}
+        />
       )}
     </div>
   );
 }
 
-function DayView({ rows }: { rows: ReservationRow[] }) {
+function DayView({
+  rows,
+  status,
+  createAction,
+}: {
+  rows: ReservationRow[];
+  status: StatusFilter;
+  createAction?: React.ReactNode;
+}) {
   if (rows.length === 0) {
+    // 絞り込み中は「条件に合う予約がない」ことを伝える（登録を促さない）
+    if (status !== "ALL") {
+      return (
+        <EmptyState
+          icon={<CalendarX2 aria-hidden="true" />}
+          title="条件に合う予約がありません"
+          description={`この日に「${RESERVATION_STATUS_LABELS[status]}」の予約はありません。ステータスの絞り込みを「すべて」に戻すと、ほかの予約を確認できます。`}
+        />
+      );
+    }
     return (
       <EmptyState
-        icon={<CalendarX2 />}
-        title="予約なし"
-        description="この日の予約はまだ登録されていません。「予約を作成」から登録できます。"
+        icon={<CalendarX2 aria-hidden="true" />}
+        title="この日の予約はまだありません"
+        description="「予約を作成」から、お客様・メニュー・時刻を選んで登録できます。"
+        action={createAction}
       />
     );
   }
@@ -194,26 +238,36 @@ function DayView({ rows }: { rows: ReservationRow[] }) {
               <TableHead>顧客名</TableHead>
               <TableHead>メニュー</TableHead>
               <TableHead>担当</TableHead>
-              <TableHead>金額</TableHead>
+              <TableHead className="text-right">金額</TableHead>
               <TableHead>経路</TableHead>
               <TableHead>ステータス</TableHead>
-              <TableHead className="text-right" />
+              <TableHead className="text-right">
+                <span className="sr-only">操作</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
               <TableRow key={row.id}>
-                <TableCell className="whitespace-nowrap font-medium text-gray-900">
+                <TableCell className="whitespace-nowrap font-medium tabular-nums text-gray-900">
                   {row.startTime}–{row.endTime}
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-gray-900">
-                  {row.customerName}
+                <TableCell className="whitespace-nowrap">
+                  <Link
+                    href={`/dashboard/reservations/${row.id}`}
+                    className={cn(
+                      "font-medium text-gray-900 hover:text-brand-dark hover:underline",
+                      LINK_FOCUS
+                    )}
+                  >
+                    {row.customerName}
+                  </Link>
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-gray-600">
                   {row.serviceName}
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-gray-600">{row.staffName}</TableCell>
-                <TableCell className="whitespace-nowrap text-gray-900">
+                <TableCell className="whitespace-nowrap text-right tabular-nums text-gray-900">
                   {formatYen(row.price)}
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-xs text-gray-500">
@@ -238,11 +292,16 @@ function DayView({ rows }: { rows: ReservationRow[] }) {
         {rows.map((row) => (
           <Card key={row.id} className="p-4">
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold tabular-nums text-gray-900">
                   {row.startTime}–{row.endTime}
                 </p>
-                <p className="mt-1 truncate font-medium text-gray-900">{row.customerName}</p>
+                <Link
+                  href={`/dashboard/reservations/${row.id}`}
+                  className={cn("mt-1 block truncate font-medium text-gray-900", LINK_FOCUS)}
+                >
+                  {row.customerName}
+                </Link>
                 <p className="truncate text-sm text-gray-500">
                   {row.serviceName} ／ {row.staffName}
                 </p>
@@ -258,9 +317,13 @@ function DayView({ rows }: { rows: ReservationRow[] }) {
               <span className="text-xs text-gray-500">
                 {RESERVATION_SOURCE_LABELS[row.source]}
               </span>
-              <span className="font-medium text-gray-900">{formatYen(row.price)}</span>
+              <span className="font-medium tabular-nums text-gray-900">
+                {formatYen(row.price)}
+              </span>
             </div>
-            {row.note && <p className="mt-2 text-xs text-gray-500">{row.note}</p>}
+            {row.note && (
+              <p className="mt-2 break-words text-xs text-gray-500">{row.note}</p>
+            )}
           </Card>
         ))}
       </div>
@@ -283,27 +346,34 @@ function WeekView({
         <div
           key={day.ymd}
           className={cn(
-            "flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm",
+            "flex min-w-0 flex-col overflow-hidden rounded-xl border bg-white shadow-sm",
             day.ymd === todayYmd ? "border-brand" : "border-gray-200"
           )}
         >
           <button
             type="button"
             onClick={() => onSelectDay(day.ymd)}
-            className="border-b border-gray-100 px-3 py-2 text-left transition-colors hover:bg-gray-50"
+            aria-label={`${day.dateLabel}（${day.dayLabel}曜）の予約を日別で表示`}
+            className="border-b border-gray-100 px-3 py-2 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50"
           >
-            <p className="text-xs text-gray-500">
+            <p className="truncate text-xs text-gray-500">
               {day.dayLabel}曜
               {day.ymd === todayYmd && <span className="ml-1 font-medium text-brand">今日</span>}
             </p>
-            <p className="text-sm font-semibold text-gray-900">{day.dateLabel}</p>
+            <p className="truncate text-sm font-semibold tabular-nums text-gray-900">
+              {day.dateLabel}
+            </p>
           </button>
           <div className="flex-1 space-y-1 p-2">
             {day.rows.length === 0 ? (
               <p className="py-3 text-center text-xs text-gray-400">予約なし</p>
             ) : (
               day.rows.map((r) => (
-                <div key={r.id} className="rounded-md bg-gray-50 px-2 py-1.5">
+                <Link
+                  key={r.id}
+                  href={`/dashboard/reservations/${r.id}`}
+                  className="block rounded-md bg-gray-50 px-2 py-1.5 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                >
                   <p className="truncate text-xs font-medium text-gray-900">
                     {r.startTime} {r.customerName}
                   </p>
@@ -318,7 +388,7 @@ function WeekView({
                       {RESERVATION_STATUS_LABELS[r.status]}
                     </Badge>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>

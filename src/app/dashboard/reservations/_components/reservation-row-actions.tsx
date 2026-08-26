@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   CalendarClock,
   CheckCircle2,
-  CircleSlash,
   FileText,
   MoreHorizontal,
   RotateCcw,
@@ -95,15 +94,21 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="操作メニュー" disabled={busy}>
-            <MoreHorizontal />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 md:h-8 md:w-8"
+            aria-label={`${row.customerName}様の予約の操作メニュー`}
+            disabled={busy}
+          >
+            <MoreHorizontal aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem
             onSelect={() => router.push(`/dashboard/reservations/${row.id}`)}
           >
-            <FileText />
+            <FileText aria-hidden="true" />
             詳細を見る
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -111,7 +116,7 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
             <DropdownMenuItem
               onSelect={() => void patchAction({ action: "confirm" }, "予約を確定しました")}
             >
-              <CheckCircle2 />
+              <CheckCircle2 aria-hidden="true" />
               確定する
             </DropdownMenuItem>
           )}
@@ -120,7 +125,7 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
               <DropdownMenuItem
                 onSelect={() => void patchAction({ action: "complete" }, "来店済みにしました")}
               >
-                <CheckCircle2 />
+                <CheckCircle2 aria-hidden="true" />
                 来店済みにする
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -130,7 +135,7 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
                   setRescheduleOpen(true);
                 }}
               >
-                <CalendarClock />
+                <CalendarClock aria-hidden="true" />
                 日時を変更
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -141,7 +146,7 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
                   setCancelOpen(true);
                 }}
               >
-                <XCircle />
+                <XCircle aria-hidden="true" />
                 キャンセル
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -150,7 +155,7 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
                   void patchAction({ action: "no_show" }, "無断キャンセルとして記録しました")
                 }
               >
-                <UserX />
+                <UserX aria-hidden="true" />
                 無断キャンセル
               </DropdownMenuItem>
             </>
@@ -159,7 +164,7 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
             <DropdownMenuItem
               onSelect={() => void patchAction({ action: "uncomplete" }, "来店済みを取り消しました")}
             >
-              <RotateCcw />
+              <RotateCcw aria-hidden="true" />
               来店済みを取り消す
             </DropdownMenuItem>
           )}
@@ -168,7 +173,7 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
               className="text-red-600 focus:text-red-600"
               onSelect={() => setDeleteOpen(true)}
             >
-              <Trash2 />
+              <Trash2 aria-hidden="true" />
               削除する
             </DropdownMenuItem>
           )}
@@ -209,7 +214,7 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
                 if (ok) setCancelOpen(false);
               }}
             >
-              キャンセルを確定
+              {busy ? "キャンセル中…" : "キャンセルを確定"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -258,7 +263,7 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
                 if (ok) setRescheduleOpen(false);
               }}
             >
-              変更を保存
+              {busy ? "保存中…" : "変更を保存"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -278,8 +283,8 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
               閉じる
             </Button>
             <Button variant="destructive" disabled={busy} onClick={() => void handleDelete()}>
-              <CircleSlash />
-              削除する
+              <Trash2 aria-hidden="true" />
+              {busy ? "削除中…" : "削除する"}
             </Button>
           </DialogFooter>
         </DialogContent>

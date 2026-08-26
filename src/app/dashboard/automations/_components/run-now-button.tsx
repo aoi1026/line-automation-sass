@@ -45,8 +45,16 @@ export function RunNowButton() {
   }
 
   return (
-    <Button onClick={handleRun} disabled={running}>
-      {running ? <Spinner className="text-white" /> : <Play />}
+    <Button
+      onClick={handleRun}
+      disabled={running}
+      title="予約リマインドや再来店リマインドなど、送信対象のメッセージをすぐに送信します"
+    >
+      {running ? (
+        <Spinner className="text-white" aria-hidden="true" />
+      ) : (
+        <Play aria-hidden="true" />
+      )}
       {running ? "実行中…" : "今すぐ実行"}
     </Button>
   );

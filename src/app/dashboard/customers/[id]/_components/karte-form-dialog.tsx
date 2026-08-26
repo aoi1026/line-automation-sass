@@ -144,7 +144,8 @@ export function KarteFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="karte-visited-at">
-                来店日 <span className="text-red-500">*</span>
+                来店日 <span className="text-red-500" aria-hidden="true">*</span>
+                <span className="sr-only">（必須）</span>
               </Label>
               <Input
                 id="karte-visited-at"
@@ -166,12 +167,12 @@ export function KarteFormDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>担当スタッフ</Label>
+            <Label htmlFor="karte-staff">担当スタッフ</Label>
             <Select
               value={form.staffId || STAFF_NONE}
               onValueChange={(v) => set("staffId", v === STAFF_NONE ? "" : v)}
             >
-              <SelectTrigger>
+              <SelectTrigger id="karte-staff">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -187,7 +188,8 @@ export function KarteFormDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="karte-content">
-              施術内容 <span className="text-red-500">*</span>
+              施術内容 <span className="text-red-500" aria-hidden="true">*</span>
+                <span className="sr-only">（必須）</span>
             </Label>
             <Textarea
               id="karte-content"
@@ -228,7 +230,7 @@ export function KarteFormDialog({
               </Button>
             </DialogClose>
             <Button type="submit" disabled={saving}>
-              {saving ? "保存中..." : mode === "create" ? "作成する" : "保存する"}
+              {saving ? "保存中…" : mode === "create" ? "作成する" : "保存する"}
             </Button>
           </DialogFooter>
         </form>

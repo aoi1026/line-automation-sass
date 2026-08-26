@@ -36,7 +36,7 @@ export default async function CustomersImportPage() {
             href="/dashboard/customers"
             className={buttonVariants({ variant: "outline" })}
           >
-            <ArrowLeft />
+            <ArrowLeft aria-hidden="true" />
             顧客一覧に戻る
           </Link>
         }

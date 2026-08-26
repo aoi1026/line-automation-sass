@@ -70,7 +70,7 @@ export default async function PublicBookingPage({
     return (
       <div className="min-h-screen bg-gray-50 px-4 py-20">
         <div className="mx-auto max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-          <CalendarX2 className="mx-auto h-12 w-12 text-gray-300" />
+          <CalendarX2 aria-hidden="true" className="mx-auto h-12 w-12 text-gray-300" />
           <h1 className="mt-4 text-lg font-bold text-gray-900">
             予約ページが見つかりません
           </h1>
@@ -137,25 +137,29 @@ export default async function PublicBookingPage({
           <p className="text-xs font-semibold tracking-wide text-brand">
             ネット予約受付中
           </p>
-          <h1 className="mt-1 text-xl font-bold text-gray-900">{store.name}</h1>
+          <h1 className="mt-1 text-balance text-xl font-bold text-gray-900">{store.name}</h1>
           {store.description && (
-            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
               {store.description}
             </p>
           )}
           {(store.address || store.phone) && (
-            <div className="mt-3 flex flex-col gap-1.5 text-xs text-gray-500">
+            <div className="mt-3 flex flex-col gap-1 text-xs text-gray-500">
               {store.address && (
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                  {store.address}
+                <span className="flex items-start gap-1.5">
+                  <MapPin aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <span className="break-words">{store.address}</span>
                 </span>
               )}
               {store.phone && (
-                <span className="flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                  {store.phone}
-                </span>
+                <a
+                  href={`tel:${store.phone.replace(/[^0-9+]/g, "")}`}
+                  className="-ml-1 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-1 transition-colors hover:text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                >
+                  <Phone aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <span className="break-words">{store.phone}</span>
+                  <span className="sr-only">（タップで電話をかけられます）</span>
+                </a>
               )}
             </div>
           )}

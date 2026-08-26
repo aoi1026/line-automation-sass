@@ -6,7 +6,13 @@ import { toast } from "sonner";
 import { CalendarOff, Plus, Trash2 } from "lucide-react";
 import { formatJstDate, fromJst, jstYmd } from "@/lib/jst";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { HolidayRow } from "./settings-tabs";
@@ -39,12 +45,13 @@ function HolidayItem({
       <Button
         variant="ghost"
         size="sm"
-        className="shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+        className="h-11 shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700"
         disabled={deleting}
         onClick={() => onDelete(holiday)}
+        aria-label={`${formatJstDate(new Date(holiday.date))}の休業日を削除`}
       >
-        <Trash2 />
-        削除
+        <Trash2 aria-hidden="true" />
+        {deleting ? "削除中…" : "削除"}
       </Button>
     </div>
   );
@@ -54,21 +61,26 @@ export function HolidaysForm({ holidays }: { holidays: HolidayRow[] }) {
   const router = useRouter();
   const [date, setDate] = useState("");
   const [reason, setReason] = useState("");
+  const [dateError, setDateError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const todayYmd = jstYmd(new Date());
   const todayStart = fromJst(todayYmd).getTime();
-  const upcoming = holidays.filter((h) => new Date(h.date).getTime() >= todayStart);
+  const upcoming = holidays.filter(
+    (h) => new Date(h.date).getTime() >= todayStart,
+  );
   const past = holidays
     .filter((h) => new Date(h.date).getTime() < todayStart)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const add = async () => {
     if (!date) {
+      setDateError("休業日の日付を選択してください");
       toast.error("休業日の日付を選択してください");
       return;
     }
+    setDateError(null);
     setSaving(true);
     try {
       const res = await fetch("/api/store/holidays", {
@@ -82,7 +94,9 @@ export function HolidaysForm({ holidays }: { holidays: HolidayRow[] }) {
         setReason("");
         router.refresh();
       } else {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         toast.error(body?.error ?? "登録に失敗しました");
       }
     } catch {
@@ -94,16 +108,26 @@ export function HolidaysForm({ holidays }: { holidays: HolidayRow[] }) {
 
   const remove = async (holiday: HolidayRow) => {
     const label = formatJstDate(new Date(holiday.date));
-    if (!window.confirm(`${label} の休業日を削除します。よろしいですか？`)) return;
+    if (
+      !window.confirm(
+        `${label} の臨時休業日を削除します。\nこの日はWeb予約ページで再び予約を受け付けるようになります。`,
+      )
+    ) {
+      return;
+    }
 
     setDeletingId(holiday.id);
     try {
-      const res = await fetch(`/api/store/holidays/${holiday.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/store/holidays/${holiday.id}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
         toast.success("休業日を削除しました");
         router.refresh();
       } else {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         toast.error(body?.error ?? "削除に失敗しました");
       }
     } catch {
@@ -122,39 +146,74 @@ export function HolidaysForm({ holidays }: { holidays: HolidayRow[] }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
-        <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:flex-row sm:items-end">
-          <div className="flex flex-col gap-1.5 sm:w-48">
-            <Label htmlFor="holiday-date">日付</Label>
-            <Input
-              id="holiday-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+        <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            <div className="flex flex-col gap-1.5 sm:w-48">
+              <Label htmlFor="holiday-date">
+                日付
+                <span className="ml-0.5 text-red-500" aria-hidden="true">
+                  *
+                </span>
+              </Label>
+              <Input
+                id="holiday-date"
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  if (dateError) setDateError(null);
+                }}
+                required
+                aria-required="true"
+                aria-invalid={dateError ? true : undefined}
+                aria-describedby={dateError ? "holiday-date-error" : undefined}
+              />
+              {dateError && (
+                <p
+                  id="holiday-date-error"
+                  role="alert"
+                  className="mt-1 text-xs text-red-600"
+                >
+                  {dateError}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-1 flex-col gap-1.5">
+              <Label htmlFor="holiday-reason">理由（任意）</Label>
+              <Input
+                id="holiday-reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="例:「設備メンテナンスのため」"
+                maxLength={200}
+                aria-describedby="holiday-reason-help"
+              />
+              <p
+                id="holiday-reason-help"
+                className="mt-1 text-xs text-gray-500"
+              >
+                店舗の管理用のメモです。お客様には表示されません。
+              </p>
+            </div>
           </div>
-          <div className="flex flex-1 flex-col gap-1.5">
-            <Label htmlFor="holiday-reason">理由（任意）</Label>
-            <Input
-              id="holiday-reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="例:「設備メンテナンスのため」"
-              maxLength={200}
-            />
+          <div className="flex justify-end">
+            <Button onClick={add} disabled={saving} className="shrink-0">
+              <Plus aria-hidden="true" />
+              {saving ? "登録中…" : "休業日を追加"}
+            </Button>
           </div>
-          <Button onClick={add} disabled={saving} className="shrink-0">
-            <Plus />
-            {saving ? "登録中…" : "休業日を追加"}
-          </Button>
         </div>
 
         <div className="flex flex-col gap-2">
           <h3 className="text-sm font-semibold text-gray-900">今後の休業日</h3>
           {upcoming.length === 0 ? (
             <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-gray-300 py-8 text-center">
-              <CalendarOff className="h-6 w-6 text-gray-300" />
+              <CalendarOff
+                className="h-6 w-6 text-gray-300"
+                aria-hidden="true"
+              />
               <p className="text-sm text-gray-500">
-                今後の臨時休業日は登録されていません。
+                今後の臨時休業日は登録されていません。上のフォームから日付を選んで追加できます。
               </p>
             </div>
           ) : (
@@ -173,7 +232,9 @@ export function HolidaysForm({ holidays }: { holidays: HolidayRow[] }) {
 
         {past.length > 0 && (
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-semibold text-gray-500">過去の休業日</h3>
+            <h3 className="text-sm font-semibold text-gray-500">
+              過去の休業日
+            </h3>
             <div className="flex flex-col divide-y divide-gray-100">
               {past.map((h) => (
                 <HolidayItem

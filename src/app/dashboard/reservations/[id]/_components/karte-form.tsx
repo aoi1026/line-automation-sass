@@ -176,7 +176,7 @@ export function ReservationKarteCard({
         </div>
         {record && !editing && (
           <Button variant="outline" size="sm" onClick={startEditing}>
-            <Pencil />
+            <Pencil aria-hidden="true" />
             編集
           </Button>
         )}
@@ -187,7 +187,8 @@ export function ReservationKarteCard({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="reservation-karte-visited-at">
-                  来店日 <span className="text-red-500">*</span>
+                  来店日 <span className="text-red-500" aria-hidden="true">*</span>
+                <span className="sr-only">（必須）</span>
                 </Label>
                 <Input
                   id="reservation-karte-visited-at"
@@ -209,12 +210,12 @@ export function ReservationKarteCard({
             </div>
 
             <div className="space-y-1.5">
-              <Label>担当スタッフ</Label>
+              <Label htmlFor="reservation-karte-staff">担当スタッフ</Label>
               <Select
                 value={form.staffId || STAFF_NONE}
                 onValueChange={(v) => set("staffId", v === STAFF_NONE ? "" : v)}
               >
-                <SelectTrigger>
+                <SelectTrigger id="reservation-karte-staff">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -230,7 +231,8 @@ export function ReservationKarteCard({
 
             <div className="space-y-1.5">
               <Label htmlFor="reservation-karte-content">
-                施術内容 <span className="text-red-500">*</span>
+                施術内容 <span className="text-red-500" aria-hidden="true">*</span>
+                <span className="sr-only">（必須）</span>
               </Label>
               <Textarea
                 id="reservation-karte-content"
@@ -274,7 +276,7 @@ export function ReservationKarteCard({
                 キャンセル
               </Button>
               <Button type="submit" disabled={saving}>
-                {saving ? "保存中..." : "保存する"}
+                {saving ? "保存中…" : "保存する"}
               </Button>
             </div>
           </form>
@@ -304,7 +306,7 @@ export function ReservationKarteCard({
               このご来店のカルテはまだ記入されていません。
             </p>
             <Button onClick={startEditing}>
-              <ClipboardPen />
+              <ClipboardPen aria-hidden="true" />
               カルテを記入
             </Button>
           </div>

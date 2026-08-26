@@ -62,16 +62,17 @@ export function TagsPopover({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-6 gap-1 px-1.5 text-xs text-gray-400 hover:text-gray-600"
+          aria-label="このお客様のタグを編集"
+          className="h-7 gap-1 px-1.5 text-xs text-gray-400 hover:text-gray-600"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
           編集
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64">
         <p className="mb-2 text-sm font-medium text-gray-900">タグを編集</p>
         {storeTags.length === 0 ? (
-          <p className="text-sm text-gray-400">タグがまだありません。</p>
+          <p className="text-sm text-gray-500">タグがまだありません。ツールバーの「タグを管理」から追加できます。</p>
         ) : (
           <div className="max-h-56 space-y-2 overflow-y-auto">
             {storeTags.map((tag) => (
@@ -96,7 +97,7 @@ export function TagsPopover({
         )}
         <div className="mt-3 flex justify-end">
           <Button type="button" size="sm" onClick={() => void handleSave()} disabled={saving}>
-            {saving ? "保存中..." : "保存"}
+            {saving ? "保存中…" : "保存"}
           </Button>
         </div>
       </PopoverContent>

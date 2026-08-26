@@ -114,20 +114,60 @@ export async function POST(
   const startAt = fromJst(data.date, data.time);
   const endAt = addMinutes(startAt, service.durationMin);
 
-  const reservation = await prisma.reservation.create({
-    data: {
-      storeId: store.id,
-      customerId: customer.id,
-      serviceId: service.id,
-      staffId,
-      startAt,
-      endAt,
-      status: "PENDING",
-      source: "WEB",
-      price: service.price,
-      note,
-    },
-  });
+  // 空き枠の確認と予約の作成を1つのトランザクションにまとめる。
+  // 上の再検証と作成の間に別のお客様が同じ枠を取ると二重予約が成立するため、
+  // Serializable で直列化し、競合したトランザクションは失敗させる。
+  let reservation;
+  try {
+    reservation = await prisma.$transaction(
+      async (tx) => {
+        const overlapping = await tx.reservation.findMany({
+          where: {
+            storeId: store.id,
+            status: { in: ["PENDING", "CONFIRMED"] },
+            startAt: { lt: endAt },
+            endAt: { gt: startAt },
+          },
+          select: { staffId: true },
+        });
+        const staffCount = await tx.staffMember.count({
+          where: { storeId: store.id, active: true },
+        });
+        const capacity = Math.max(1, staffCount);
+        const full = staffId
+          ? overlapping.some((r) => r.staffId === staffId) || overlapping.length >= capacity
+          : overlapping.length >= capacity;
+        if (full) throw new Error("SLOT_TAKEN");
+
+        return tx.reservation.create({
+          data: {
+            storeId: store.id,
+            customerId: customer.id,
+            serviceId: service.id,
+            staffId,
+            startAt,
+            endAt,
+            status: "PENDING",
+            source: "WEB",
+            price: service.price,
+            note,
+          },
+        });
+      },
+      { isolationLevel: "Serializable" }
+    );
+  } catch (e) {
+    // SLOT_TAKEN（自前の判定）と P2034（Serializable の書き込み競合）は
+    // いずれも「その枠が埋まった」ことを意味するので、同じ案内を返す
+    const code = (e as { code?: string }).code;
+    if ((e instanceof Error && e.message === "SLOT_TAKEN") || code === "P2034") {
+      return jsonError(
+        "申し訳ありません。その時間は埋まってしまいました。別の時間をお選びください",
+        409
+      );
+    }
+    throw e;
+  }
 
   // 店舗スタッフ向けの通知（Web予約は未確定のため、確定操作を促す）。
   // notify() は内部で例外を握りつぶすため、予約の登録を妨げることはない

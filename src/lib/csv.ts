@@ -30,8 +30,17 @@ export function csvResponse(filename: string, csv: string): Response {
 }
 
 /**
+ * toCsv が付けた数式インジェクション対策のクォートを取り除く。
+ * 付けたときと同じ条件（`\'` の直後が数式記号）のときだけ外すので、
+ * 元から `\'` で始まる値を壊さない。
+ */
+function unescapeCell(cell: string): string {
+  return /^'[=+\-@\t\r]/.test(cell) ? cell.slice(1) : cell;
+}
+
+/**
  * CSV テキストをパースして行配列を返す（ダブルクォート・埋め込み改行に対応）。
- * 先頭の BOM は除去する。
+ * 先頭の BOM は除去し、書き出し時のインジェクション対策クォートも戻す。
  */
 export function parseCsv(text: string): string[][] {
   const src = text.replace(/^﻿/, "");
@@ -50,11 +59,11 @@ export function parseCsv(text: string): string[][] {
       continue;
     }
     if (ch === '"') { inQuotes = true; continue; }
-    if (ch === ",") { row.push(cell); cell = ""; continue; }
+    if (ch === ",") { row.push(unescapeCell(cell)); cell = ""; continue; }
     if (ch === "\r") continue;
-    if (ch === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; continue; }
+    if (ch === "\n") { row.push(unescapeCell(cell)); rows.push(row); row = []; cell = ""; continue; }
     cell += ch;
   }
-  if (cell !== "" || row.length > 0) { row.push(cell); rows.push(row); }
+  if (cell !== "" || row.length > 0) { row.push(unescapeCell(cell)); rows.push(row); }
   return rows.filter((r) => r.some((c) => c.trim() !== ""));
 }

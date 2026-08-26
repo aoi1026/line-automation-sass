@@ -94,8 +94,8 @@ export function LineLinkCard({
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="h-4 w-4 text-brand" />
+          <CardTitle role="heading" aria-level={2} className="flex flex-wrap items-center gap-2">
+            <MessageCircle aria-hidden="true" className="h-4 w-4 text-brand" />
             LINE連携
             {linked && <Badge>連携済み</Badge>}
           </CardTitle>
@@ -121,19 +121,19 @@ export function LineLinkCard({
                 onClick={() => void handleUnlink()}
                 disabled={unlinking}
               >
-                {unlinking ? "解除中..." : "連携を解除"}
+                {unlinking ? "解除中…" : "連携を解除"}
               </Button>
             </div>
           ) : (
             <div className="space-y-2">
               <Button onClick={() => void handleIssue()} disabled={issuing}>
-                {issuing ? "発行中..." : "連携コードを発行"}
+                {issuing ? "発行中…" : "連携コードを発行"}
               </Button>
               {code && (
                 <div>
                   <button
                     type="button"
-                    className="text-xs text-brand underline underline-offset-2"
+                    className="rounded-sm text-xs text-brand-dark underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
                     onClick={() => setCodeOpen(true)}
                   >
                     発行済みのコードを表示

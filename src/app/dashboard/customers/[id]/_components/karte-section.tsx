@@ -88,7 +88,7 @@ function KarteTimelineItem({
       )}
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-sm font-semibold text-gray-900">{record.visitedAtLabel}</span>
+        <h3 className="text-sm font-semibold text-gray-900">{record.visitedAtLabel}</h3>
         {record.serviceName && <Badge variant="secondary">{record.serviceName}</Badge>}
         {record.staffName && (
           <span className="text-xs text-gray-500">担当: {record.staffName}</span>
@@ -96,9 +96,9 @@ function KarteTimelineItem({
         {record.reservationId && (
           <Link
             href={`/dashboard/reservations/${record.reservationId}`}
-            className="text-xs text-brand hover:underline"
+            className="rounded-sm text-xs text-brand-dark hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
           >
-            予約詳細
+            この日の予約を見る
           </Link>
         )}
         <div className="ml-auto flex items-center gap-1">
@@ -118,11 +118,11 @@ function KarteTimelineItem({
             trigger={
               <Button
                 variant="ghost"
-                size="sm"
-                className="text-gray-400 hover:text-gray-700"
-                aria-label="カルテを編集"
+                size="icon"
+                className="h-9 w-9 text-gray-400 hover:text-gray-700"
+                aria-label={`${record.visitedAtLabel}のカルテを編集`}
               >
-                <Pencil />
+                <Pencil aria-hidden="true" />
               </Button>
             }
           />
@@ -156,7 +156,7 @@ function KarteTimelineItem({
             className="-ml-3 text-gray-500"
             onClick={() => setExpanded((prev) => !prev)}
           >
-            {expanded ? <ChevronUp /> : <ChevronDown />}
+            {expanded ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
             {expanded ? "折りたたむ" : "すべて表示"}
           </Button>
         )}
@@ -179,7 +179,9 @@ export function KarteSection({
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
         <div className="space-y-1.5">
-          <CardTitle>カルテ履歴</CardTitle>
+          <CardTitle role="heading" aria-level={2}>
+            カルテ履歴
+          </CardTitle>
           <CardDescription>
             ご来店ごとの施術記録です。新しいものから表示しています。
           </CardDescription>
@@ -190,7 +192,7 @@ export function KarteSection({
           staffOptions={staffOptions}
           trigger={
             <Button variant="outline" size="sm">
-              <Plus />
+              <Plus aria-hidden="true" />
               カルテを追加
             </Button>
           }
@@ -199,7 +201,7 @@ export function KarteSection({
       <CardContent>
         {records.length === 0 ? (
           <EmptyState
-            icon={<ClipboardList />}
+            icon={<ClipboardList aria-hidden="true" />}
             title="カルテがまだありません"
             description="施術内容や使用した薬剤を記録しておくと、次回のご来店で役立ちます。"
             action={
@@ -209,7 +211,7 @@ export function KarteSection({
                 staffOptions={staffOptions}
                 trigger={
                   <Button size="sm">
-                    <Plus />
+                    <Plus aria-hidden="true" />
                     カルテを追加
                   </Button>
                 }

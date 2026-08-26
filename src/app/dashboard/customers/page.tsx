@@ -84,7 +84,7 @@ export default async function CustomersPage({
             mode="create"
             trigger={
               <Button>
-                <Plus />
+                <Plus aria-hidden="true" />
                 顧客を登録
               </Button>
             }
@@ -93,13 +93,13 @@ export default async function CustomersPage({
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="顧客数" value={`${formatNumber(totalCount)}名`} icon={<Users />} />
+        <StatCard label="顧客数" value={`${formatNumber(totalCount)}名`} icon={<Users aria-hidden="true" />} />
         <StatCard
           label="LINE連携済み"
           value={`${formatNumber(lineCount)}名`}
-          icon={<MessageCircle />}
+          icon={<MessageCircle aria-hidden="true" />}
         />
-        <StatCard label="今月の新規" value={`${formatNumber(newThisMonth)}名`} icon={<Sparkles />} />
+        <StatCard label="今月の新規" value={`${formatNumber(newThisMonth)}名`} icon={<Sparkles aria-hidden="true" />} />
       </div>
 
       <Card>
@@ -109,7 +109,7 @@ export default async function CustomersPage({
             initialQ={q}
             initialTag={tagId}
           />
-          <CustomersTable rows={rows} />
+          <CustomersTable rows={rows} hasFilter={q !== "" || tagId !== ""} />
         </CardContent>
       </Card>
     </>

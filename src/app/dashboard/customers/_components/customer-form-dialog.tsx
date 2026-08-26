@@ -146,7 +146,8 @@ export function CustomerFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="customer-name">
-                氏名 <span className="text-red-500">*</span>
+                氏名 <span className="text-red-500" aria-hidden="true">*</span>
+                <span className="sr-only">（必須）</span>
               </Label>
               <Input
                 id="customer-name"
@@ -231,7 +232,7 @@ export function CustomerFormDialog({
               </Button>
             </DialogClose>
             <Button type="submit" disabled={saving}>
-              {saving ? "保存中..." : mode === "create" ? "登録する" : "保存する"}
+              {saving ? "保存中…" : mode === "create" ? "登録する" : "保存する"}
             </Button>
           </DialogFooter>
         </form>

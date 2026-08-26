@@ -79,16 +79,22 @@ export async function POST(req: Request) {
     return jsonError(`1回に取り込めるのは${MAX_IMPORT_ROWS}行までです`);
   }
 
-  // 電話番号による突き合わせ用に、この店舗の既存顧客を1度だけ読み込む
+  // 既存顧客との突き合わせ用に、この店舗の顧客を1度だけ読み込む。
+  //
+  // 突き合わせは「電話番号 + 氏名」で行う。電話番号だけで判定すると、
+  // ご家族で同じ番号を共有しているお客様（自宅の固定電話など）を
+  // 別人と識別できず、既存のお客様の情報を上書きしてしまうため。
   const existing = await prisma.customer.findMany({
     where: { storeId: session.storeId, NOT: { phone: "" } },
-    select: { id: true, phone: true },
+    select: { id: true, phone: true, name: true },
     orderBy: { createdAt: "asc" },
   });
-  const byPhone = new Map<string, string>();
+  const matchKey = (phone: string, name: string) =>
+    `${normalizePhone(phone)}\u0000${name.trim()}`;
+  const byPhoneAndName = new Map<string, string>();
   for (const c of existing) {
-    const key = normalizePhone(c.phone);
-    if (key && !byPhone.has(key)) byPhone.set(key, c.id);
+    const key = normalizePhone(c.phone) ? matchKey(c.phone, c.name) : "";
+    if (key && !byPhoneAndName.has(key)) byPhoneAndName.set(key, c.id);
   }
 
   let created = 0;
@@ -112,7 +118,7 @@ export async function POST(req: Request) {
     const phoneKey = normalizePhone(row.phone);
     const birthday = row.birthday ? parseBirthday(row.birthday) : null;
     const gender = normalizeGender(row.gender);
-    const existingId = phoneKey ? byPhone.get(phoneKey) : undefined;
+    const existingId = phoneKey ? byPhoneAndName.get(matchKey(row.phone, row.name)) : undefined;
 
     if (existingId) {
       // 既存顧客は「空欄でない項目のみ」上書きする
@@ -155,7 +161,7 @@ export async function POST(req: Request) {
     });
     created += 1;
     // 同一ファイル内に同じ電話番号が複数ある場合は、2件目以降を更新として扱う
-    if (phoneKey) byPhone.set(phoneKey, customer.id);
+    if (phoneKey) byPhoneAndName.set(matchKey(row.phone, row.name), customer.id);
   }
 
   return NextResponse.json({

@@ -36,9 +36,9 @@ export default async function TemplatesPage() {
 
       {templates.length === 0 ? (
         <EmptyState
-          icon={<FileText />}
+          icon={<FileText aria-hidden="true" />}
           title="テンプレートがまだありません"
-          description="テンプレートを作成すると、自動配信の文面をお店らしい表現にカスタマイズできます。未作成の間は標準文面で送信されます。"
+          description="テンプレートを作成すると、自動配信の文面をお店らしい表現にカスタマイズできます。まずは「予約リマインド」の文面から作ってみましょう。未作成の間は標準文面で送信されます。"
           action={<CreateTemplateButton storeName={store.name} />}
         />
       ) : (
@@ -52,8 +52,8 @@ export default async function TemplatesPage() {
                   <span className="text-xs font-normal text-gray-400">{items.length}件</span>
                 </h2>
                 {items.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-400">
-                    テンプレートがありません（標準文面が使われます）
+                  <p className="rounded-lg border border-dashed border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-500">
+                    この種別のテンプレートはまだありません。標準文面で送信されます。
                   </p>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

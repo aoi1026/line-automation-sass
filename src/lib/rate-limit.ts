@@ -51,10 +51,31 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
   return { ok: true, remaining: limit - bucket.count, retryAfterSec: 0 };
 }
 
-/** リクエストから発信元IPを推定する */
+/**
+ * リクエストから発信元IPを推定する。
+ *
+ * X-Forwarded-For は「クライアント, プロキシ1, プロキシ2, ...」の順に積まれ、
+ * **先頭はクライアントが自由に詐称できる**。先頭を信用するとレート制限は
+ * ヘッダーを付け替えるだけで回避できてしまう。
+ *
+ * リバースプロキシ（nginx の $proxy_add_x_forwarded_for など）は
+ * 実際のTCP接続元を末尾に追加するため、信頼できるのは末尾側から数えた値。
+ * 自前のプロキシ段数を TRUSTED_PROXY_HOPS で指定する（既定1段）。
+ */
 export function getClientIp(req: Request): string {
+  const hops = Math.max(1, Number(process.env.TRUSTED_PROXY_HOPS || 1));
   const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
+  if (forwarded) {
+    const parts = forwarded
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length > 0) {
+      // 末尾から hops 段目が、自分のプロキシが観測した実際の接続元
+      const idx = Math.max(0, parts.length - hops);
+      return parts[idx];
+    }
+  }
   return req.headers.get("x-real-ip") ?? "unknown";
 }
 

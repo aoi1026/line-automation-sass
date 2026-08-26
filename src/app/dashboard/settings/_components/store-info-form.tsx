@@ -20,6 +20,8 @@ import type { StoreInfoData } from "./settings-tabs";
 
 const SLOT_INTERVAL_OPTIONS = [15, 30, 60];
 
+type FieldErrors = { name?: string; rebookingDays?: string };
+
 export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
   const router = useRouter();
   const [name, setName] = useState(storeInfo.name);
@@ -28,6 +30,7 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
   const [description, setDescription] = useState(storeInfo.description);
   const [slotIntervalMin, setSlotIntervalMin] = useState(String(storeInfo.slotIntervalMin));
   const [rebookingDays, setRebookingDays] = useState(String(storeInfo.defaultRebookingIntervalDays));
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
 
   const copyReserveUrl = async () => {
@@ -40,15 +43,20 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
   };
 
   const save = async () => {
+    const nextErrors: FieldErrors = {};
     if (!name.trim()) {
-      toast.error("店舗名を入力してください");
-      return;
+      nextErrors.name = "店舗名を入力してください";
     }
     const days = Number(rebookingDays);
     if (!Number.isInteger(days) || days < 1 || days > 365) {
-      toast.error("再来店リマインドの標準間隔は1〜365日で入力してください");
+      nextErrors.rebookingDays = "1〜365日の範囲で入力してください";
+    }
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      toast.error("入力内容をご確認ください");
       return;
     }
+
     setSaving(true);
     try {
       const res = await fetch("/api/store", {
@@ -85,22 +93,44 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
         <CardContent className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="store-name">店舗名</Label>
+              <Label htmlFor="store-name">
+                店舗名
+                <span className="ml-0.5 text-red-500" aria-hidden="true">
+                  *
+                </span>
+              </Label>
               <Input
                 id="store-name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+                }}
                 placeholder="例: リピナビサロン 表参道店"
+                required
+                aria-required="true"
+                aria-invalid={errors.name ? true : undefined}
+                aria-describedby={errors.name ? "store-name-error" : undefined}
               />
+              {errors.name && (
+                <p id="store-name-error" role="alert" className="mt-1 text-xs text-red-600">
+                  {errors.name}
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="store-phone">電話番号</Label>
               <Input
                 id="store-phone"
+                type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="例: 03-1234-5678"
+                aria-describedby="store-phone-help"
               />
+              <p id="store-phone-help" className="mt-1 text-xs text-gray-500">
+                Web予約ページとお客様への確認メッセージに表示されます。
+              </p>
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -120,13 +150,17 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
               placeholder="お店の特徴やこだわりをご記入ください。Web予約ページに表示されます。"
+              aria-describedby="store-description-help"
             />
+            <p id="store-description-help" className="mt-1 text-xs text-gray-500">
+              Web予約ページの冒頭に表示されます。
+            </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label>予約枠の間隔</Label>
+              <Label htmlFor="store-slot-interval">予約枠の間隔</Label>
               <Select value={slotIntervalMin} onValueChange={setSlotIntervalMin}>
-                <SelectTrigger>
+                <SelectTrigger id="store-slot-interval" aria-describedby="store-slot-interval-help">
                   <SelectValue placeholder="選択してください" />
                 </SelectTrigger>
                 <SelectContent>
@@ -137,22 +171,53 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
                   ))}
                 </SelectContent>
               </Select>
+              <p id="store-slot-interval-help" className="mt-1 text-xs text-gray-500">
+                Web予約ページで表示する時間の刻みです。30分なら10:00・10:30…と表示されます。
+              </p>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="store-rebooking-days">再来店リマインドの標準間隔</Label>
+              <Label htmlFor="store-rebooking-days">
+                再来店リマインドの標準間隔
+                <span className="ml-0.5 text-red-500" aria-hidden="true">
+                  *
+                </span>
+              </Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="store-rebooking-days"
                   type="number"
+                  inputMode="numeric"
                   min={1}
                   max={365}
                   value={rebookingDays}
-                  onChange={(e) => setRebookingDays(e.target.value)}
+                  onChange={(e) => {
+                    setRebookingDays(e.target.value);
+                    if (errors.rebookingDays) {
+                      setErrors((prev) => ({ ...prev, rebookingDays: undefined }));
+                    }
+                  }}
                   className="w-28"
+                  required
+                  aria-required="true"
+                  aria-invalid={errors.rebookingDays ? true : undefined}
+                  aria-describedby={
+                    errors.rebookingDays
+                      ? "store-rebooking-days-error store-rebooking-days-help"
+                      : "store-rebooking-days-help"
+                  }
                 />
                 <span className="text-sm text-gray-500">日</span>
               </div>
-              <p className="text-xs text-gray-500">
+              {errors.rebookingDays && (
+                <p
+                  id="store-rebooking-days-error"
+                  role="alert"
+                  className="mt-1 text-xs text-red-600"
+                >
+                  {errors.rebookingDays}
+                </p>
+              )}
+              <p id="store-rebooking-days-help" className="mt-1 text-xs text-gray-500">
                 メニューごとの推奨間隔が未設定の場合に使用されます。
               </p>
             </div>
@@ -174,10 +239,18 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Input value={storeInfo.reserveUrl} readOnly className="bg-gray-50 font-mono text-xs sm:text-sm" />
+            <Label htmlFor="store-reserve-url" className="sr-only">
+              Web予約ページのURL
+            </Label>
+            <Input
+              id="store-reserve-url"
+              value={storeInfo.reserveUrl}
+              readOnly
+              className="bg-gray-50 font-mono text-xs sm:text-sm"
+            />
             <div className="flex shrink-0 gap-2">
               <Button variant="outline" onClick={copyReserveUrl}>
-                <Copy />
+                <Copy aria-hidden="true" />
                 コピー
               </Button>
               <a
@@ -186,7 +259,7 @@ export function StoreInfoForm({ storeInfo }: { storeInfo: StoreInfoData }) {
                 rel="noreferrer"
                 className={buttonVariants({ variant: "outline" })}
               >
-                <ExternalLink />
+                <ExternalLink aria-hidden="true" />
                 開く
               </a>
             </div>

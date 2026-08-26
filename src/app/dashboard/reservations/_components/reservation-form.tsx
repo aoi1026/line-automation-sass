@@ -3,9 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { formatYen } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -182,22 +184,21 @@ export function ReservationForm({
 
   if (customers.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center">
-        <p className="text-sm text-gray-600">
-          顧客が登録されていません。予約を作成するには、先に顧客を登録してください。
-        </p>
-        <Link
-          href="/dashboard/customers"
-          className="mt-3 inline-block text-sm font-medium text-brand hover:underline"
-        >
-          顧客管理へ
-        </Link>
-      </div>
+      <EmptyState
+        icon={<UserPlus aria-hidden="true" />}
+        title="お客様がまだ登録されていません"
+        description="予約を作成するには、先にお客様を登録してください。"
+        action={
+          <Link href="/dashboard/customers" className={buttonVariants({ size: "sm" })}>
+            顧客を登録
+          </Link>
+        }
+      />
     );
   }
 
   const slotPlaceholder = slotsLoading
-    ? "読み込み中..."
+    ? "読み込み中…"
     : timeOptions.length === 0
       ? "空き枠がありません"
       : "時刻を選択";
@@ -206,9 +207,9 @@ export function ReservationForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
-          <Label>顧客</Label>
+          <Label htmlFor="reservation-form-customer">顧客</Label>
           <Select value={customerId || undefined} onValueChange={setCustomerId}>
-            <SelectTrigger aria-label="顧客を選択">
+            <SelectTrigger id="reservation-form-customer">
               <SelectValue placeholder="顧客を選択" />
             </SelectTrigger>
             <SelectContent>
@@ -223,9 +224,9 @@ export function ReservationForm({
         </div>
 
         <div className="space-y-2">
-          <Label>メニュー</Label>
+          <Label htmlFor="reservation-form-service">メニュー</Label>
           <Select value={serviceId} onValueChange={handleServiceChange}>
-            <SelectTrigger aria-label="メニューを選択">
+            <SelectTrigger id="reservation-form-service">
               <SelectValue placeholder="メニューを選択" />
             </SelectTrigger>
             <SelectContent>
@@ -240,9 +241,9 @@ export function ReservationForm({
         </div>
 
         <div className="space-y-2">
-          <Label>担当</Label>
+          <Label htmlFor="reservation-form-staff">担当</Label>
           <Select value={staffId} onValueChange={setStaffId}>
-            <SelectTrigger aria-label="担当を選択">
+            <SelectTrigger id="reservation-form-staff">
               <SelectValue placeholder="担当を選択" />
             </SelectTrigger>
             <SelectContent>
@@ -267,14 +268,14 @@ export function ReservationForm({
         </div>
 
         <div className="space-y-2">
-          <Label>時刻</Label>
+          <Label htmlFor="reservation-form-time">時刻</Label>
           <Select
             key={`${date}-${serviceId}-${staffId}`}
             value={time || undefined}
             onValueChange={setTime}
             disabled={slotsLoading || timeOptions.length === 0}
           >
-            <SelectTrigger aria-label="時刻を選択">
+            <SelectTrigger id="reservation-form-time">
               <SelectValue placeholder={slotPlaceholder} />
             </SelectTrigger>
             <SelectContent>
@@ -285,6 +286,11 @@ export function ReservationForm({
               ))}
             </SelectContent>
           </Select>
+          {!slotsLoading && timeOptions.length === 0 && date && (
+            <p className="text-xs text-amber-700" role="status">
+              この日に空いている枠がありません。日付・メニュー・担当を変えてお試しください。
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -301,12 +307,12 @@ export function ReservationForm({
 
         {mode === "create" && (
           <div className="space-y-2">
-            <Label>ステータス</Label>
+            <Label htmlFor="reservation-form-status">ステータス</Label>
             <Select
               value={status}
               onValueChange={(v) => setStatus(v === "PENDING" ? "PENDING" : "CONFIRMED")}
             >
-              <SelectTrigger aria-label="ステータスを選択">
+              <SelectTrigger id="reservation-form-status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -330,7 +336,13 @@ export function ReservationForm({
 
       <div className="flex justify-end">
         <Button type="submit" disabled={submitting}>
-          {mode === "create" ? "予約を作成" : "変更を保存"}
+          {submitting
+            ? mode === "create"
+              ? "作成中…"
+              : "保存中…"
+            : mode === "create"
+              ? "予約を作成"
+              : "変更を保存"}
         </Button>
       </div>
     </form>

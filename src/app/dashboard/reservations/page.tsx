@@ -161,6 +161,15 @@ export default async function ReservationsPage({
         pendingCount={pendingCount}
         dayRows={view === "day" ? rows : []}
         weekDays={weekDays}
+        createAction={
+          <CreateReservationDialog
+            key={`empty-${date}`}
+            customers={customers}
+            services={services}
+            staffMembers={staffMembers}
+            defaultDate={date}
+          />
+        }
       />
     </>
   );

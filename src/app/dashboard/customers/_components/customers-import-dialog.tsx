@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatNumber } from "@/lib/utils";
 import {
   IMPORT_COLUMNS,
   MAX_IMPORT_ROWS,
@@ -125,7 +126,7 @@ export function CustomersImportDialog() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button type="button" variant="outline">
-          <Upload />
+          <Upload aria-hidden="true" />
           CSVで取り込み
         </Button>
       </DialogTrigger>
@@ -159,14 +160,14 @@ export function CustomersImportDialog() {
             <li>氏名は必須です。空欄の行は取り込まずにスキップします。</li>
             <li>列の並び順は問いません。不要な列は省略していただけます。</li>
             <li>性別は「女性」「男性」「その他」、誕生日は1990-04-15の形式でご入力ください。</li>
-            <li>1回に取り込めるのは{MAX_IMPORT_ROWS}行までです。文字コードはUTF-8に対応しています。</li>
+            <li>1回に取り込めるのは{formatNumber(MAX_IMPORT_ROWS)}行までです。文字コードはUTF-8に対応しています。</li>
           </ul>
         </div>
 
         {result && result.skippedRows.length > 0 && (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5" role="alert">
             <p className="text-sm font-medium text-gray-900">
-              取り込めなかった行（{result.skipped}件）
+              取り込めなかった行（{formatNumber(result.skipped)}件）
             </p>
             <div className="max-h-40 overflow-y-auto rounded-lg border border-red-200 bg-red-50 px-3 py-2">
               <ul className="space-y-1 text-xs text-red-700">
@@ -191,8 +192,8 @@ export function CustomersImportDialog() {
             </Button>
           </DialogClose>
           <Button type="button" onClick={() => void handleImport()} disabled={!file || importing}>
-            <Upload />
-            {importing ? "取り込み中..." : "取り込む"}
+            <Upload aria-hidden="true" />
+            {importing ? "取り込み中…" : "取り込む"}
           </Button>
         </DialogFooter>
       </DialogContent>

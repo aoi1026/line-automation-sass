@@ -51,11 +51,11 @@ export function KarteDeleteButton({
       <DialogTrigger asChild>
         <Button
           variant="ghost"
-          size="sm"
-          className="text-gray-400 hover:bg-red-50 hover:text-red-600"
-          aria-label="カルテを削除"
+          size="icon"
+          className="h-9 w-9 text-gray-400 hover:bg-red-50 hover:text-red-600"
+          aria-label={`${visitedAtLabel}のカルテを削除`}
         >
-          <Trash2 />
+          <Trash2 aria-hidden="true" />
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -72,7 +72,7 @@ export function KarteDeleteButton({
             </Button>
           </DialogClose>
           <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleting}>
-            {deleting ? "削除中..." : "削除する"}
+            {deleting ? "削除中…" : "削除する"}
           </Button>
         </DialogFooter>
       </DialogContent>
