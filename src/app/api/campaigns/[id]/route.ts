@@ -49,10 +49,16 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (campaign.status !== "SCHEDULED") {
       return jsonError("配信予約中のキャンペーンのみ中止できます");
     }
-    const cancelled = await prisma.campaign.update({
-      where: { id: campaign.id },
+    // 配信エンジンが同時に SENDING へ進めている場合があるため、
+    // ステータス条件付きで更新し、取得できなければ競合として扱う
+    const claimed = await prisma.campaign.updateMany({
+      where: { id: campaign.id, status: "SCHEDULED" },
       data: { status: "CANCELLED" },
     });
+    if (claimed.count === 0) {
+      return jsonError("配信が開始されたため中止できませんでした");
+    }
+    const cancelled = await prisma.campaign.findUnique({ where: { id: campaign.id } });
     return NextResponse.json(cancelled);
   }
 
@@ -114,10 +120,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const targets = await resolveTargets(session.storeId, rules);
   update.targetCount = targets.length;
 
-  const updated = await prisma.campaign.update({
-    where: { id: campaign.id },
+  // 編集中に配信が開始された場合は上書きしない（下書き・配信予約中のときだけ更新）
+  const saved = await prisma.campaign.updateMany({
+    where: { id: campaign.id, status: { in: ["DRAFT", "SCHEDULED"] } },
     data: update,
   });
+  if (saved.count === 0) {
+    return jsonError("配信が開始されたため保存できませんでした");
+  }
+  const updated = await prisma.campaign.findUnique({ where: { id: campaign.id } });
   return NextResponse.json(updated);
 }
 
