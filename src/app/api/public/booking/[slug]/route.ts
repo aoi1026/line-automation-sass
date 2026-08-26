@@ -3,7 +3,6 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError, notFound, parseBody } from "@/lib/api";
 import { addMinutes, formatJstDateTime, fromJst } from "@/lib/jst";
-import { notifyReservationEvent } from "@/lib/messaging";
 import { notify } from "@/lib/notifications";
 import { computeDaySlots } from "./shared";
 
@@ -130,8 +129,9 @@ export async function POST(
     link: `/dashboard/reservations/${reservation.id}`,
   });
 
-  // 自動配信（予約確認）が有効な店舗のみ実送信される。無効時は何もしない。
-  await notifyReservationEvent(reservation.id, "BOOKING_CONFIRMATION");
+  // Web予約は未確定（PENDING）で登録されるため、ここでは確認メッセージを送らない。
+  // 店舗が「確定する」操作を行った時点で BOOKING_CONFIRMATION が送信される
+  // （送信元: PATCH /api/reservations/[id] の confirm）。二重送信の防止。
 
   return NextResponse.json({ publicToken: reservation.publicToken });
 }
