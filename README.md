@@ -16,7 +16,7 @@ LINE顧客リピート自動化マイクロSaaS。
   <img alt="Prisma" src="https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma&logoColor=white">
   <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white">
   <img alt="LINE Messaging API" src="https://img.shields.io/badge/LINE-Messaging%20API-06C755?logo=line&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-95%20passing-06C755">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-98%20passing-06C755">
 </p>
 
 </div>
@@ -44,6 +44,7 @@ LINE顧客リピート自動化マイクロSaaS。
 
 ### ダッシュボード
 本日の予約・今月の来店・配信状況をひと目で確認できます。
+初期設定が残っている間は、上部にセットアップガイドが表示されます。
 
 <img src="docs/screenshots/dashboard.png" alt="ダッシュボード" width="100%">
 
@@ -111,6 +112,22 @@ LINE顧客リピート自動化マイクロSaaS。
 
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+**通知センター**
+
+<img src="docs/screenshots/notifications.png" alt="通知センター" width="100%">
+
+</td>
+<td width="50%" valign="top">
+
+**営業時間・臨時休業日**
+
+<img src="docs/screenshots/settings-hours.png" alt="営業時間・臨時休業日" width="100%">
+
+</td>
+</tr>
 </table>
 
 ### お客様向けページ（モバイル最適化）
@@ -159,8 +176,11 @@ Channel Access Token を設定するまでは**デモモード**で動作し、L
 | 満足度アンケート | 星評価・選択式・自由記述を組み合わせて作成し、回答を自動集計 |
 | 分析レポート | 来店数推移・リピート率・客単価・配信実績・クーポン利用・満足度 |
 | 施術カルテ | 施術内容・使用薬剤・次回への申し送りを顧客ごとに記録 |
-| 通知センター | Web予約・キャンセル・低評価・配信完了をダッシュボードで通知 |
-| 顧客CSV入出力 | 既存の顧客台帳を取り込み、書き出しも可能 |
+| 通知センター | Web予約・キャンセル・低評価・配信完了・自動配信の失敗を通知 |
+| 顧客CSV入出力 | 既存の顧客台帳を取り込み、絞り込んだ状態のまま書き出しも可能 |
+| 臨時休業日 | 設備メンテナンス等の休業日を登録し、Web予約の受付から除外 |
+| セットアップガイド | 初期設定の進捗を可視化し、未設定の項目へ誘導 |
+| 予約QRコード | Web予約ページのQRを店頭掲示用に印刷 |
 
 ### 顧客体験
 
@@ -182,7 +202,7 @@ Channel Access Token を設定するまでは**デモモード**で動作し、L
 | 認証 | jose（JWT・HttpOnly Cookie）＋ bcryptjs |
 | バリデーション | zod（全APIの入力を検証） |
 | チャート | Recharts |
-| テスト | Vitest（95件） |
+| テスト | Vitest（98件） |
 
 ---
 
@@ -304,7 +324,9 @@ Store（店舗＝テナント）
  ├─ Coupon / CouponIssue    クーポンと発行・消込
  ├─ Survey / SurveyResponse アンケートと回答
  ├─ Segment / Campaign      抽出条件と一斉配信
- └─ TreatmentRecord         施術カルテ
+ ├─ TreatmentRecord         施術カルテ
+ ├─ StoreHoliday            臨時休業日
+ └─ Notification            通知センター
 ```
 
 ### ディレクトリ構成
@@ -342,8 +364,9 @@ src/
 
 - **日時はUTC保存・JST判断**：日付境界の判断は必ず `@/lib/jst` を経由し、`toLocaleString` は使いません
 - **予約枠計算**：営業時間・臨時休業日・所要時間・スタッフ指名・キャパシティを考慮（`src/lib/slots.ts`）
-- **二重予約の防止**：公開予約ページはサーバー側で空き枠を再検証し、管理画面からの登録・変更も重複を検出
-- **競合状態の考慮**：キャンペーン配信はステータス条件付き更新でクレームし、二重配信を防止
+- **二重予約の防止**：公開予約ページはサーバー側で空き枠を再検証し、管理画面からの登録・変更も重複を検出（`src/lib/availability.ts`）
+- **競合状態の考慮**：キャンペーンの配信・中止・編集はステータス条件付き更新でクレームし、二重配信や配信中の上書きを防止
+- **配信の冪等性**：送信済み判定はメッセージログに基づくため、再実行しても同じお客様に重複送信しません
 
 ---
 
@@ -364,7 +387,7 @@ npm run db:studio  # Prisma Studio
 ## テスト
 
 日時計算・予約枠計算・テンプレート描画・セグメント条件など、
-**バグが顧客への誤送信に直結する純粋関数**を中心に95件のユニットテストを用意しています。
+**バグが顧客への誤送信に直結する純粋関数**を中心に98件のユニットテストを用意しています。
 
 ```bash
 npm run test
@@ -373,7 +396,7 @@ npm run test
 | テスト | 対象 |
 | --- | --- |
 | `tests/jst.test.ts` | JST変換・日付境界・経過日数・誕生日判定 |
-| `tests/slots.test.ts` | 予約枠計算（定休日・指名・キャパシティ・リードタイム） |
+| `tests/slots.test.ts` | 予約枠計算（定休日・臨時休業日・指名・キャパシティ・リードタイム） |
 | `tests/templates.test.ts` | プレースホルダー描画と変数構築 |
 | `tests/segments.test.ts` | セグメント条件の検証と日本語説明文 |
 | `tests/utils.test.ts` | 金額・数値・パーセント書式、コード生成 |
