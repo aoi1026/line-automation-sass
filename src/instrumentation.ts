@@ -6,6 +6,9 @@
 export async function register() {
   // edge / client バンドルに @line/bot-sdk（node:crypto 依存）を含めないため、
   // Next.js 推奨の「=== "nodejs" ブランチ内で dynamic import」の形を守ること。
+  // next build 中（ページデータ収集フェーズ）はスケジューラを起動しない
+  if (process.env.NEXT_PHASE === "phase-production-build") return;
+
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const intervalMs = Number(process.env.AUTOMATION_INTERVAL_MS || 0);
     if (!intervalMs || intervalMs < 10000) return;
