@@ -1,0 +1,479 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========== テナント（店舗） ==========
+
+model Store {
+  id                           String   @id @default(cuid())
+  name                         String
+  slug                         String   @unique
+  phone                        String   @default("")
+  address                      String   @default("")
+  description                  String   @default("")
+  // 営業時間: { mon: { open: "10:00", close: "19:00", closed: false }, ... sun }
+  businessHours                Json     @default("{}")
+  slotIntervalMin              Int      @default(30)
+  defaultRebookingIntervalDays Int      @default(45)
+  // LINE公式アカウント連携（未設定の場合はデモモードで動作）
+  lineChannelAccessToken       String   @default("")
+  lineChannelSecret            String   @default("")
+  lineBasicId                  String   @default("") // 例: "@123abcde" 友だち追加リンク用
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  users              User[]
+  services           Service[]
+  staffMembers       StaffMember[]
+  customers          Customer[]
+  tags               Tag[]
+  reservations       Reservation[]
+  messageTemplates   MessageTemplate[]
+  automationSettings AutomationSetting[]
+  messageLogs        MessageLog[]
+  coupons            Coupon[]
+  surveys            Survey[]
+  campaigns          Campaign[]
+  segments           Segment[]
+  webhookEvents      WebhookEvent[]
+}
+
+// ========== ログインユーザー（店舗スタッフ） ==========
+
+enum UserRole {
+  OWNER
+  STAFF
+}
+
+model User {
+  id           String   @id @default(cuid())
+  storeId      String
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(OWNER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+// ========== メニュー（施術サービス） ==========
+
+model Service {
+  id                 String  @id @default(cuid())
+  storeId            String
+  name               String
+  description        String  @default("")
+  category           String  @default("")
+  durationMin        Int     @default(60)
+  price              Int     @default(0)
+  // このメニューの推奨再来店間隔（日）。未設定なら店舗デフォルトを使用
+  repeatIntervalDays Int?
+  sortOrder          Int     @default(0)
+  active             Boolean @default(true)
+
+  store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+
+  @@index([storeId])
+}
+
+// ========== スタッフ（施術担当者） ==========
+
+model StaffMember {
+  id        String  @id @default(cuid())
+  storeId   String
+  name      String
+  title     String  @default("") // 例: "スタイリスト" "ネイリスト"
+  active    Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+
+  @@index([storeId])
+}
+
+// ========== 顧客 ==========
+
+model Customer {
+  id                String    @id @default(cuid())
+  storeId           String
+  name              String
+  kana              String    @default("")
+  phone             String    @default("")
+  email             String    @default("")
+  gender            String    @default("") // "female" | "male" | "other" | ""
+  birthday          DateTime? // 日付のみ意味を持つ（時刻は無視）
+  // LINE連携
+  lineUserId        String?
+  lineDisplayName   String    @default("")
+  linkCode          String? // 顧客がLINEトークで送信する6桁の連携コード
+  linkCodeExpiresAt DateTime?
+  notes             String    @default("")
+  firstVisitAt      DateTime?
+  lastVisitAt       DateTime?
+  visitCount        Int       @default(0)
+  totalSpent        Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  store           Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  tags            CustomerTag[]
+  reservations    Reservation[]
+  messageLogs     MessageLog[]
+  couponIssues    CouponIssue[]
+  surveyRequests  SurveyRequest[]
+  surveyResponses SurveyResponse[]
+
+  @@unique([storeId, lineUserId])
+  @@index([storeId, lastVisitAt])
+  @@index([storeId, createdAt])
+}
+
+model Tag {
+  id      String @id @default(cuid())
+  storeId String
+  name    String
+  color   String @default("#06C755")
+
+  store     Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customers CustomerTag[]
+
+  @@unique([storeId, name])
+}
+
+model CustomerTag {
+  customerId String
+  tagId      String
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, tagId])
+}
+
+// ========== 予約 ==========
+
+enum ReservationStatus {
+  PENDING   // Web予約直後（未確定）
+  CONFIRMED // 確定
+  COMPLETED // 来店済み
+  CANCELLED // キャンセル
+  NO_SHOW   // 無断キャンセル
+}
+
+enum ReservationSource {
+  MANUAL // 店舗が手動登録
+  WEB    // 公開予約ページ
+  LINE   // LINE経由
+}
+
+model Reservation {
+  id           String            @id @default(cuid())
+  storeId      String
+  customerId   String
+  serviceId    String?
+  staffId      String?
+  startAt      DateTime
+  endAt        DateTime
+  status       ReservationStatus @default(CONFIRMED)
+  source       ReservationSource @default(MANUAL)
+  price        Int               @default(0)
+  note         String            @default("")
+  cancelReason String            @default("")
+  completedAt  DateTime?
+  // 顧客向け公開ページ（予約確認・キャンセル）用トークン
+  publicToken  String            @unique @default(cuid())
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  store    Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  service  Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  staff    StaffMember? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  messageLogs    MessageLog[]
+  surveyRequests SurveyRequest[]
+
+  @@index([storeId, startAt])
+  @@index([storeId, status])
+  @@index([customerId])
+}
+
+// ========== メッセージ ==========
+
+// メッセージ種別（自動配信の種類 + 手動/キャンペーン）
+enum MessageKind {
+  BOOKING_CONFIRMATION // 予約確認
+  REMINDER             // リマインダー
+  CANCELLATION         // キャンセル通知
+  RESCHEDULE           // 日時変更通知
+  THANKS               // 来店お礼（サンクスメッセージ）
+  REBOOKING            // 再来店リマインド
+  BIRTHDAY             // 誕生日メッセージ
+  CAMPAIGN             // キャンペーン一斉配信
+  MANUAL               // 手動送信
+}
+
+model MessageTemplate {
+  id        String      @id @default(cuid())
+  storeId   String
+  kind      MessageKind
+  name      String
+  content   String      @db.Text
+  enabled   Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  store              Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  automationSettings AutomationSetting[]
+
+  @@index([storeId, kind])
+}
+
+// 自動配信設定（店舗×種別ごとに1件）
+model AutomationSetting {
+  id          String      @id @default(cuid())
+  storeId     String
+  kind        MessageKind
+  enabled     Boolean     @default(false)
+  // タイミング設定:
+  //  REMINDER: 予約の offsetValue offsetUnit 前に送信（例: 1 days 前）
+  //  THANKS:   来店完了の offsetValue offsetUnit 後に送信（例: 2 hours 後）
+  //  REBOOKING/BIRTHDAY: sendHourJst 時（JST）以降の実行時に送信
+  offsetValue Int         @default(1)
+  offsetUnit  String      @default("days") // "hours" | "days"
+  sendHourJst Int         @default(10)
+  templateId  String?
+  couponId    String?
+  surveyId    String?
+  updatedAt   DateTime    @updatedAt
+
+  store    Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  template MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  coupon   Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  survey   Survey?          @relation(fields: [surveyId], references: [id], onDelete: SetNull)
+
+  @@unique([storeId, kind])
+}
+
+enum MessageChannel {
+  LINE // LINE Messaging APIで実送信
+  DEMO // デモモード（送信ログのみ記録）
+}
+
+enum MessageStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model MessageLog {
+  id            String         @id @default(cuid())
+  storeId       String
+  customerId    String?
+  reservationId String?
+  campaignId    String?
+  kind          MessageKind
+  channel       MessageChannel
+  status        MessageStatus
+  content       String         @db.Text
+  error         String         @default("")
+  sentAt        DateTime       @default(now())
+
+  store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer    Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  reservation Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, sentAt])
+  @@index([reservationId, kind])
+  @@index([customerId, kind, sentAt])
+  @@index([campaignId])
+}
+
+// ========== クーポン ==========
+
+enum DiscountType {
+  PERCENT // ％割引
+  AMOUNT  // 金額割引（円）
+}
+
+model Coupon {
+  id            String       @id @default(cuid())
+  storeId       String
+  title         String
+  description   String       @default("") @db.Text
+  discountType  DiscountType @default(PERCENT)
+  discountValue Int          @default(10)
+  code          String       @default("") // 店頭確認用コード
+  validFrom     DateTime?
+  validUntil    DateTime?
+  usageLimit    Int? // 発行上限（null = 無制限）
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  store              Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  issues             CouponIssue[]
+  automationSettings AutomationSetting[]
+  campaigns          Campaign[]
+
+  @@index([storeId])
+}
+
+model CouponIssue {
+  id         String    @id @default(cuid())
+  couponId   String
+  customerId String
+  token      String    @unique @default(cuid())
+  issuedAt   DateTime  @default(now())
+  usedAt     DateTime?
+
+  coupon   Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([couponId])
+  @@index([customerId])
+}
+
+// ========== アンケート ==========
+
+model Survey {
+  id            String   @id @default(cuid())
+  storeId       String
+  title         String
+  description   String   @default("")
+  // 質問定義: [{ id: string, type: "rating"|"choice"|"text", label: string, options?: string[], required?: boolean }]
+  questions     Json     @default("[]")
+  thanksMessage String   @default("ご回答ありがとうございました。今後のサービス向上に役立てさせていただきます。")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  store              Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  requests           SurveyRequest[]
+  responses          SurveyResponse[]
+  automationSettings AutomationSetting[]
+
+  @@index([storeId])
+}
+
+// 回答依頼（送信リンクのトークン管理）
+model SurveyRequest {
+  id            String    @id @default(cuid())
+  surveyId      String
+  customerId    String?
+  reservationId String?
+  token         String    @unique @default(cuid())
+  sentAt        DateTime  @default(now())
+  respondedAt   DateTime?
+
+  survey      Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  customer    Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  reservation Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+
+  @@index([surveyId])
+}
+
+model SurveyResponse {
+  id            String   @id @default(cuid())
+  surveyId      String
+  requestId     String?  @unique
+  customerId    String?
+  reservationId String?
+  // 回答: { [questionId]: number | string }
+  answers       Json     @default("{}")
+  rating        Int? // 総合評価（ratingタイプの最初の質問から抽出）
+  comment       String   @default("") @db.Text
+  createdAt     DateTime @default(now())
+
+  survey   Survey    @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([surveyId, createdAt])
+}
+
+// ========== セグメント & キャンペーン ==========
+
+// セグメント抽出条件（rules）:
+// {
+//   lastVisitDaysMin?: number,  // 最終来店からN日以上
+//   lastVisitDaysMax?: number,  // 最終来店からN日以内
+//   visitCountMin?: number,
+//   visitCountMax?: number,
+//   totalSpentMin?: number,
+//   tagIds?: string[],
+//   birthdayMonth?: number,     // 1-12
+//   gender?: "female" | "male",
+//   hasLine?: boolean
+// }
+model Segment {
+  id        String   @id @default(cuid())
+  storeId   String
+  name      String
+  rules     Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store     Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
+
+  @@index([storeId])
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  storeId     String
+  title       String
+  content     String         @db.Text
+  segmentId   String?
+  // segmentId未指定時のインライン抽出条件（Segment.rulesと同形式）
+  filters     Json?
+  couponId    String?
+  status      CampaignStatus @default(DRAFT)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  targetCount Int            @default(0)
+  sentCount   Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  segment     Segment?     @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+  coupon      Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  messageLogs MessageLog[]
+
+  @@index([storeId, status])
+}
+
+// ========== LINE Webhook イベントログ ==========
+
+model WebhookEvent {
+  id        String   @id @default(cuid())
+  storeId   String?
+  type      String
+  payload   Json
+  createdAt DateTime @default(now())
+
+  store Store? @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}

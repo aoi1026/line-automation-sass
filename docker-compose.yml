@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: repinavi-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: repinavi
+      POSTGRES_PASSWORD: repinavi
+      POSTGRES_DB: repinavi
+    ports:
+      - "5433:5432"
+    volumes:
+      - repinavi-pgdata:/var/lib/postgresql/data
+
+volumes:
+  repinavi-pgdata:
