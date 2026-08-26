@@ -23,7 +23,7 @@ function formatValidUntil(validUntil: Date | null): string {
   return validUntil ? formatJstDate(validUntil) : "無期限";
 }
 
-type CouponStatus = "active" | "used" | "expired" | "inactive";
+type CouponStatus = "active" | "used" | "expired" | "inactive" | "upcoming";
 
 /**
  * クーポンカード（公開ページ /c/[token] と管理画面プレビューで共通の見た目）。
@@ -60,9 +60,11 @@ export function CouponCard({
     ? "used"
     : validUntil && validUntil < now
       ? "expired"
-      : inactive
-        ? "inactive"
-        : "active";
+      : validFrom && validFrom > now
+        ? "upcoming"
+        : inactive
+          ? "inactive"
+          : "active";
 
   const dimmed = status === "used" || status === "expired";
 
@@ -133,6 +135,16 @@ export function CouponCard({
               </Badge>
             )}
             {status === "inactive" && <Badge variant="outline">無効</Badge>}
+            {status === "upcoming" && (
+              <Badge variant="outline" className="border-amber-300 text-amber-700">
+                利用開始前
+              </Badge>
+            )}
+            {status === "upcoming" && validFrom && (
+              <p className="text-xs text-gray-500">
+                {formatJstDate(validFrom)}からご利用いただけます
+              </p>
+            )}
 
             {status === "used" && usedAt && (
               <p className="text-xs text-gray-500">利用日: {formatJstDate(usedAt)}</p>
