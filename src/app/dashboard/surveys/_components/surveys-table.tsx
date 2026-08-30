@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BarChart3, Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { SurveyQuestion } from "@/app/api/surveys/schema";
-import { formatNumber } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -95,6 +96,11 @@ function ActiveSwitch({
   );
 }
 
+/** 一覧内のリンクに共通のフォーカスリング */
+const LINK_FOCUS =
+  "rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+
+/** アンケート一覧（sm以上: テーブル / sm未満: カード） */
 export function SurveysTable({ rows }: { rows: SurveyRow[] }) {
   const router = useRouter();
 
@@ -159,9 +165,57 @@ export function SurveysTable({ rows }: { rows: SurveyRow[] }) {
     }
   }
 
+  /** 表・カードで共通の操作メニュー */
+  function renderRowMenu(row: SurveyRow) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            aria-label={`「${row.title}」の操作メニュー`}
+          >
+            <MoreHorizontal aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={() => router.push(`/dashboard/surveys/${row.id}/edit`)}
+          >
+            <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+            編集
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => router.push(`/dashboard/surveys/${row.id}`)}
+          >
+            <BarChart3 className="mr-2 h-4 w-4" aria-hidden="true" />
+            回答を見る
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={duplicatingId === row.id}
+            onClick={() => handleDuplicate(row)}
+          >
+            <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
+            {duplicatingId === row.id ? "複製中…" : "複製"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-red-600 focus:text-red-600"
+            onClick={() => setDeleteTarget(row)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+            削除
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
   return (
     <>
-      <Card>
+      {/* デスクトップ: テーブル */}
+      <Card className="hidden sm:block">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -224,54 +278,7 @@ export function SurveysTable({ rows }: { rows: SurveyRow[] }) {
                     className="text-right"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          aria-label={`「${row.title}」の操作メニュー`}
-                        >
-                          <MoreHorizontal aria-hidden="true" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            router.push(`/dashboard/surveys/${row.id}/edit`)
-                          }
-                        >
-                          <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
-                          編集
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            router.push(`/dashboard/surveys/${row.id}`)
-                          }
-                        >
-                          <BarChart3
-                            className="mr-2 h-4 w-4"
-                            aria-hidden="true"
-                          />
-                          回答を見る
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={duplicatingId === row.id}
-                          onClick={() => handleDuplicate(row)}
-                        >
-                          <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
-                          {duplicatingId === row.id ? "複製中…" : "複製"}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600 focus:text-red-600"
-                          onClick={() => setDeleteTarget(row)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
-                          削除
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {renderRowMenu(row)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -279,6 +286,55 @@ export function SurveysTable({ rows }: { rows: SurveyRow[] }) {
           </Table>
         </CardContent>
       </Card>
+
+      {/* モバイル: カード（操作ボタンが画面外に出ないよう縦に並べる） */}
+      <div className="space-y-3 sm:hidden">
+        {rows.map((row) => (
+          <Card key={row.id} className="p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={`/dashboard/surveys/${row.id}`}
+                  className={cn(
+                    "block truncate font-medium text-gray-900 hover:text-brand-dark hover:underline",
+                    LINK_FOCUS,
+                  )}
+                >
+                  {row.title}
+                </Link>
+                {row.description !== "" && (
+                  <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">
+                    {row.description}
+                  </p>
+                )}
+              </div>
+              {renderRowMenu(row)}
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
+              <span className="tabular-nums">
+                質問 {formatNumber(row.questionCount)}
+              </span>
+              <span className="tabular-nums">
+                回答 {formatNumber(row.responseCount)}
+              </span>
+              <RatingValue value={row.avgRating} className="text-xs" />
+              <span className="ml-auto text-gray-400">{row.updatedLabel}</span>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 pt-3">
+              <span className="text-xs text-gray-500">
+                {row.active ? "回答を受け付け中" : "停止中"}
+              </span>
+              <ActiveSwitch
+                surveyId={row.id}
+                active={row.active}
+                surveyTitle={row.title}
+              />
+            </div>
+          </Card>
+        ))}
+      </div>
 
       <Dialog
         open={deleteTarget !== null}

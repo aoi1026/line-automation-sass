@@ -142,7 +142,7 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
 
   const remove = async (staff: StaffRow) => {
     const ok = window.confirm(
-      `「${staff.name}」を削除します。\nWeb予約ページの担当者一覧から表示されなくなり、お客様は指名できなくなります。\n過去の予約履歴はそのまま残ります。`,
+      `「${staff.name}」を削除します。\nWeb予約ページの担当者一覧から表示されなくなり、お客様は指名できなくなります。\n過去の予約は残りますが、その予約から担当者名が消えるため、分析の担当者別実績ではこのスタッフの実績が失われ、「指名なし」として集計されます。\n退職や休職で受付を止めるだけなら、削除せず「有効」をオフにしてください。担当者名と実績はそのまま残ります。`,
     );
     if (!ok) return;
     setDeletingId(staff.id);
@@ -192,64 +192,117 @@ export function StaffTab({ staffMembers }: { staffMembers: StaffRow[] }) {
             }
           />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>名前</TableHead>
-                <TableHead>役職</TableHead>
-                <TableHead>状態</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* デスクトップ: テーブル */}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>名前</TableHead>
+                    <TableHead>役職</TableHead>
+                    <TableHead>状態</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {staffMembers.map((staff) => (
+                    <TableRow key={staff.id}>
+                      <TableCell className="font-medium text-gray-900">
+                        {staff.name}
+                      </TableCell>
+                      <TableCell className="text-gray-700">
+                        {staff.title || (
+                          <span className="text-gray-400">未設定</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={staff.active}
+                          onCheckedChange={(checked) =>
+                            toggleActive(staff, checked)
+                          }
+                          aria-label={`${staff.name}をWeb予約ページに表示する`}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-11"
+                            onClick={() => openEdit(staff)}
+                            aria-label={`${staff.name}を編集`}
+                          >
+                            <Pencil aria-hidden="true" />
+                            編集
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => remove(staff)}
+                            disabled={deletingId === staff.id}
+                            aria-label={`${staff.name}を削除`}
+                          >
+                            <Trash2 aria-hidden="true" />
+                            {deletingId === staff.id ? "削除中…" : "削除"}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* モバイル: カード（操作ボタンが画面外に出ないよう縦に並べる） */}
+            <ul className="space-y-3 sm:hidden">
               {staffMembers.map((staff) => (
-                <TableRow key={staff.id}>
-                  <TableCell className="font-medium text-gray-900">
-                    {staff.name}
-                  </TableCell>
-                  <TableCell className="text-gray-700">
-                    {staff.title || (
-                      <span className="text-gray-400">未設定</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
+                <li
+                  key={staff.id}
+                  className="rounded-lg border border-gray-200 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900">{staff.name}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        {staff.title || "役職は未設定"}
+                      </p>
+                    </div>
                     <Switch
                       checked={staff.active}
-                      onCheckedChange={(checked) =>
-                        toggleActive(staff, checked)
-                      }
+                      onCheckedChange={(checked) => toggleActive(staff, checked)}
                       aria-label={`${staff.name}をWeb予約ページに表示する`}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-11"
-                        onClick={() => openEdit(staff)}
-                        aria-label={`${staff.name}を編集`}
-                      >
-                        <Pencil aria-hidden="true" />
-                        編集
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => remove(staff)}
-                        disabled={deletingId === staff.id}
-                        aria-label={`${staff.name}を削除`}
-                      >
-                        <Trash2 aria-hidden="true" />
-                        {deletingId === staff.id ? "削除中…" : "削除"}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-gray-100 pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-11"
+                      onClick={() => openEdit(staff)}
+                      aria-label={`${staff.name}を編集`}
+                    >
+                      <Pencil aria-hidden="true" />
+                      編集
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      onClick={() => remove(staff)}
+                      disabled={deletingId === staff.id}
+                      aria-label={`${staff.name}を削除`}
+                    >
+                      <Trash2 aria-hidden="true" />
+                      {deletingId === staff.id ? "削除中…" : "削除"}
+                    </Button>
+                  </div>
+                </li>
               ))}
-            </TableBody>
-          </Table>
+            </ul>
+          </>
         )}
       </CardContent>
 

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,7 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
   const [newDate, setNewDate] = React.useState(row.ymd);
   const [newTime, setNewTime] = React.useState(row.startTime);
 
+  const [noShowOpen, setNoShowOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   async function patchAction(
@@ -151,9 +153,7 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-red-600 focus:text-red-600"
-                onSelect={() =>
-                  void patchAction({ action: "no_show" }, "無断キャンセルとして記録しました")
-                }
+                onSelect={() => setNoShowOpen(true)}
               >
                 <UserX aria-hidden="true" />
                 無断キャンセル
@@ -179,6 +179,24 @@ export function ReservationRowActions({ row }: { row: ReservationRow }) {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* 無断キャンセルの確認 */}
+      <ConfirmDialog
+        open={noShowOpen}
+        onOpenChange={setNoShowOpen}
+        title="無断キャンセルとして記録"
+        description={`${row.customerName}様の予約を無断キャンセルとして記録します。お客様の来店履歴に残り、来店実績には計上されません。お客様へメッセージは送信されません。`}
+        confirmLabel="無断キャンセルにする"
+        destructive
+        loading={busy}
+        onConfirm={async () => {
+          const ok = await patchAction(
+            { action: "no_show" },
+            "無断キャンセルとして記録しました"
+          );
+          if (ok) setNoShowOpen(false);
+        }}
+      />
 
       {/* キャンセルダイアログ */}
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>

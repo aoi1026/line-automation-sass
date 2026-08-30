@@ -91,14 +91,19 @@ export default async function DashboardHomePage() {
         startAt: { gte: monthStart, lt: nextMonthStart },
       },
     }),
-    // 今月の配信（全種別）
-    prisma.messageLog.count({
-      where: { storeId, sentAt: { gte: monthStart, lt: nextMonthStart } },
-    }),
-    // うち自動配信（キャンペーン・手動送信を除く）
+    // 今月の配信（全種別）。LINE未連携によるスキップ・送信失敗は届いていないため数えない
     prisma.messageLog.count({
       where: {
         storeId,
+        status: "SENT",
+        sentAt: { gte: monthStart, lt: nextMonthStart },
+      },
+    }),
+    // うち自動配信（キャンペーン・手動送信を除く）。同じく送信できたものだけを数える
+    prisma.messageLog.count({
+      where: {
+        storeId,
+        status: "SENT",
         sentAt: { gte: monthStart, lt: nextMonthStart },
         kind: { notIn: ["CAMPAIGN", "MANUAL"] },
       },
@@ -106,8 +111,10 @@ export default async function DashboardHomePage() {
     // LINE連携済みの顧客数
     prisma.customer.count({ where: { storeId, lineUserId: { not: null } } }),
     prisma.customer.count({ where: { storeId } }),
-    // 未確定のWeb予約
-    prisma.reservation.count({ where: { storeId, status: "PENDING" } }),
+    // 未確定のWeb予約（今日以降。「今後」タブで一覧に到達できる件数と一致させる）
+    prisma.reservation.count({
+      where: { storeId, status: "PENDING", startAt: { gte: todayStart } },
+    }),
     // 最近の配信
     prisma.messageLog.findMany({
       where: { storeId },
@@ -204,9 +211,9 @@ export default async function DashboardHomePage() {
             icon={<Sparkles aria-hidden="true" />}
           />
           <StatCard
-            label="今月の配信"
+            label="今月の送信済み"
             value={`${formatNumber(monthMessageCount)}件`}
-            sub={`内訳: 自動 ${formatNumber(monthAutoMessageCount)}件`}
+            sub={`お届けできた件数（うち自動配信 ${formatNumber(monthAutoMessageCount)}件）`}
             icon={<Send aria-hidden="true" />}
           />
           <StatCard
@@ -224,7 +231,7 @@ export default async function DashboardHomePage() {
               <div className="flex flex-1 items-center gap-3">
                 <TriangleAlert aria-hidden="true" className="h-5 w-5 shrink-0 text-amber-500" />
                 <p className="text-sm text-amber-900">
-                  未確定のWeb予約が
+                  今日以降の未確定のWeb予約が
                   <span className="mx-1 font-bold tabular-nums">
                     {formatNumber(pendingWebCount)}件
                   </span>
@@ -232,7 +239,7 @@ export default async function DashboardHomePage() {
                 </p>
               </div>
               <Link
-                href="/dashboard/reservations?status=PENDING"
+                href="/dashboard/reservations?view=upcoming&status=PENDING"
                 className={cn(
                   buttonVariants({ size: "sm", variant: "outline" }),
                   "shrink-0 border-amber-300 bg-white text-amber-800 hover:bg-amber-100"

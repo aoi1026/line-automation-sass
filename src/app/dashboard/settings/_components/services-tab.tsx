@@ -189,7 +189,7 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
 
   const remove = async (service: ServiceRow) => {
     const ok = window.confirm(
-      `「${service.name}」を削除します。\nWeb予約ページのメニュー一覧から表示されなくなり、お客様は選べなくなります。\n過去の予約履歴と売上はそのまま残ります。`,
+      `「${service.name}」を削除します。\nWeb予約ページのメニュー一覧から表示されなくなり、お客様は選べなくなります。\n過去の予約は残りますが、その予約からもこのメニュー名が表示されなくなり、分析の人気メニュー（メニュー別実績）にも含まれなくなります。売上金額の合計には引き続き含まれます。\nWeb予約で選ばせたくないだけなら、削除せず「有効」をオフにしてください。メニュー名と実績はそのまま残ります。`,
     );
     if (!ok) return;
     setDeletingId(service.id);
@@ -241,46 +241,104 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
             }
           />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>メニュー名</TableHead>
-                <TableHead>所要時間</TableHead>
-                <TableHead>料金</TableHead>
-                <TableHead>再来店間隔</TableHead>
-                <TableHead>状態</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* デスクトップ: テーブル */}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>メニュー名</TableHead>
+                    <TableHead>所要時間</TableHead>
+                    <TableHead>料金</TableHead>
+                    <TableHead>再来店間隔</TableHead>
+                    <TableHead>状態</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {services.map((service) => (
+                    <TableRow key={service.id}>
+                      <TableCell>
+                        <div className="font-medium text-gray-900">
+                          {service.name}
+                        </div>
+                        {service.category && (
+                          <div className="mt-0.5 text-xs text-gray-500">
+                            {service.category}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-gray-700">
+                        {service.durationMin}分
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-gray-700">
+                        {formatYen(service.price)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {service.repeatIntervalDays != null ? (
+                          <span className="text-gray-700">
+                            {service.repeatIntervalDays}日
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">標準</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={service.active}
+                          onCheckedChange={(checked) =>
+                            toggleActive(service, checked)
+                          }
+                          aria-label={`${service.name}をWeb予約ページに表示する`}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-11"
+                            onClick={() => openEdit(service)}
+                            aria-label={`${service.name}を編集`}
+                          >
+                            <Pencil aria-hidden="true" />
+                            編集
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => remove(service)}
+                            disabled={deletingId === service.id}
+                            aria-label={`${service.name}を削除`}
+                          >
+                            <Trash2 aria-hidden="true" />
+                            {deletingId === service.id ? "削除中…" : "削除"}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* モバイル: カード（操作ボタンが画面外に出ないよう縦に並べる） */}
+            <ul className="space-y-3 sm:hidden">
               {services.map((service) => (
-                <TableRow key={service.id}>
-                  <TableCell>
-                    <div className="font-medium text-gray-900">
-                      {service.name}
+                <li
+                  key={service.id}
+                  className="rounded-lg border border-gray-200 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900">{service.name}</p>
+                      {service.category && (
+                        <p className="mt-0.5 text-xs text-gray-500">
+                          {service.category}
+                        </p>
+                      )}
                     </div>
-                    {service.category && (
-                      <div className="mt-0.5 text-xs text-gray-500">
-                        {service.category}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-gray-700">
-                    {service.durationMin}分
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-gray-700">
-                    {formatYen(service.price)}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {service.repeatIntervalDays != null ? (
-                      <span className="text-gray-700">
-                        {service.repeatIntervalDays}日
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">標準</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
                     <Switch
                       checked={service.active}
                       onCheckedChange={(checked) =>
@@ -288,36 +346,58 @@ export function ServicesTab({ services }: { services: ServiceRow[] }) {
                       }
                       aria-label={`${service.name}をWeb予約ページに表示する`}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-11"
-                        onClick={() => openEdit(service)}
-                        aria-label={`${service.name}を編集`}
-                      >
-                        <Pencil aria-hidden="true" />
-                        編集
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => remove(service)}
-                        disabled={deletingId === service.id}
-                        aria-label={`${service.name}を削除`}
-                      >
-                        <Trash2 aria-hidden="true" />
-                        {deletingId === service.id ? "削除中…" : "削除"}
-                      </Button>
+                  </div>
+
+                  <dl className="mt-3 space-y-1 text-xs text-gray-600">
+                    <div className="flex gap-2">
+                      <dt className="w-20 shrink-0 text-gray-500">所要時間</dt>
+                      <dd className="min-w-0 tabular-nums">
+                        {service.durationMin}分
+                      </dd>
                     </div>
-                  </TableCell>
-                </TableRow>
+                    <div className="flex gap-2">
+                      <dt className="w-20 shrink-0 text-gray-500">料金</dt>
+                      <dd className="min-w-0 tabular-nums">
+                        {formatYen(service.price)}
+                      </dd>
+                    </div>
+                    <div className="flex gap-2">
+                      <dt className="w-20 shrink-0 text-gray-500">再来店間隔</dt>
+                      <dd className="min-w-0">
+                        {service.repeatIntervalDays != null
+                          ? `${service.repeatIntervalDays}日`
+                          : "標準"}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-gray-100 pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-11"
+                      onClick={() => openEdit(service)}
+                      aria-label={`${service.name}を編集`}
+                    >
+                      <Pencil aria-hidden="true" />
+                      編集
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-11 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      onClick={() => remove(service)}
+                      disabled={deletingId === service.id}
+                      aria-label={`${service.name}を削除`}
+                    >
+                      <Trash2 aria-hidden="true" />
+                      {deletingId === service.id ? "削除中…" : "削除"}
+                    </Button>
+                  </div>
+                </li>
               ))}
-            </TableBody>
-          </Table>
+            </ul>
+          </>
         )}
       </CardContent>
 

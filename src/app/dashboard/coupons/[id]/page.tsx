@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil, Percent, Ticket, TicketCheck } from "lucide-react";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { formatJstDateTime, jstYmd } from "@/lib/jst";
@@ -33,28 +34,68 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "クーポン詳細" };
 
+const PAGE_SIZE = 30;
+
+type IssueRow = Prisma.CouponIssueGetPayload<{
+  include: { customer: { select: { id: true; name: true } } };
+}>;
+
 export default async function CouponDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const session = await requireSession();
 
   const coupon = await prisma.coupon.findFirst({
     where: { id, storeId: session.storeId },
-    include: {
-      store: true,
-      issues: { orderBy: { issuedAt: "desc" }, include: { customer: true } },
-    },
+    include: { store: true },
   });
   if (!coupon) notFound();
 
-  const issuedCount = coupon.issues.length;
-  const usedCount = coupon.issues.filter(
-    (issue) => issue.usedAt !== null,
-  ).length;
+  const pageParam = Number(sp.page ?? "1");
+  const requestedPage = Number.isInteger(pageParam) && pageParam >= 1 ? pageParam : 1;
+
+  // 発行履歴は件数が増え続けるため、集計はDB側で数え、一覧はページングして取得する
+  const issueWhere: Prisma.CouponIssueWhereInput = {
+    couponId: coupon.id,
+    coupon: { storeId: session.storeId },
+  };
+  const [issuedCount, usedCount] = await Promise.all([
+    prisma.couponIssue.count({ where: issueWhere }),
+    prisma.couponIssue.count({ where: { ...issueWhere, usedAt: { not: null } } }),
+  ]);
   const usageRate = issuedCount > 0 ? usedCount / issuedCount : null;
+
+  // 存在しないページ番号を指定された場合は最終ページを表示する
+  const totalPages = Math.max(1, Math.ceil(issuedCount / PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
+
+  const issues: IssueRow[] =
+    issuedCount === 0
+      ? []
+      : await prisma.couponIssue.findMany({
+          where: issueWhere,
+          // 同時発行で issuedAt が並ぶことがあるため、idで並びを確定させる
+          orderBy: [{ issuedAt: "desc" }, { id: "desc" }],
+          skip: (page - 1) * PAGE_SIZE,
+          take: PAGE_SIZE,
+          include: { customer: { select: { id: true, name: true } } },
+        });
+
+  const from = issuedCount === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const to = Math.min(page * PAGE_SIZE, issuedCount);
+
+  const couponId = coupon.id;
+  function buildHref(targetPage: number): string {
+    return targetPage > 1
+      ? `/dashboard/coupons/${couponId}?page=${targetPage}`
+      : `/dashboard/coupons/${couponId}`;
+  }
 
   return (
     <>
@@ -146,56 +187,92 @@ export default async function CouponDetailPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {coupon.issues.length === 0 ? (
+            {issuedCount === 0 ? (
               <EmptyState
                 icon={<Ticket aria-hidden="true" />}
                 title="まだ発行されていません"
                 description="来店お礼・誕生日メッセージなどの自動配信やキャンペーンにこのクーポンを添付すると、送信時に発行されます。"
               />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>顧客名</TableHead>
-                    <TableHead>発行日</TableHead>
-                    <TableHead>利用日</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {coupon.issues.map((issue) => (
-                    <TableRow key={issue.id}>
-                      <TableCell>
-                        <Link
-                          href={`/dashboard/customers/${issue.customerId}`}
-                          className="font-medium text-gray-900 hover:text-brand-dark hover:underline"
-                        >
-                          {issue.customer.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-gray-600">
-                        {formatJstDateTime(issue.issuedAt)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {issue.usedAt ? (
-                          <span className="text-gray-600">
-                            {formatJstDateTime(issue.usedAt)}
-                          </span>
-                        ) : (
-                          <Badge variant="outline">未使用</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {issue.usedAt ? (
-                          <RedeemButton issueId={issue.id} action="unredeem" />
-                        ) : (
-                          <RedeemButton issueId={issue.id} action="redeem" />
-                        )}
-                      </TableCell>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>顧客名</TableHead>
+                      <TableHead>発行日</TableHead>
+                      <TableHead>利用日</TableHead>
+                      <TableHead className="text-right">操作</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {issues.map((issue) => (
+                      <TableRow key={issue.id}>
+                        <TableCell>
+                          <Link
+                            href={`/dashboard/customers/${issue.customerId}`}
+                            className="font-medium text-gray-900 hover:text-brand-dark hover:underline"
+                          >
+                            {issue.customer.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-gray-600">
+                          {formatJstDateTime(issue.issuedAt)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {issue.usedAt ? (
+                            <span className="text-gray-600">
+                              {formatJstDateTime(issue.usedAt)}
+                            </span>
+                          ) : (
+                            <Badge variant="outline">未使用</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {issue.usedAt ? (
+                            <RedeemButton issueId={issue.id} action="unredeem" />
+                          ) : (
+                            <RedeemButton issueId={issue.id} action="redeem" />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+                  <p className="text-xs text-gray-500">
+                    全{formatNumber(issuedCount)}件中 {formatNumber(from)}〜
+                    {formatNumber(to)}件を表示
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {page > 1 ? (
+                      <Link href={buildHref(page - 1)}>
+                        <Button variant="outline" size="sm">
+                          前へ
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button variant="outline" size="sm" disabled>
+                        前へ
+                      </Button>
+                    )}
+                    <span className="text-xs text-gray-500">
+                      {page} / {totalPages}
+                    </span>
+                    {page < totalPages ? (
+                      <Link href={buildHref(page + 1)}>
+                        <Button variant="outline" size="sm">
+                          次へ
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button variant="outline" size="sm" disabled>
+                        次へ
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
 type KindCounts = { sent: number; skipped: number; failed: number };
+/** POST /api/automations/run のレスポンス（自店舗の実行結果のみが返る） */
 type RunResponse = {
   results?: Record<string, KindCounts>;
+  errors?: string[];
   error?: string;
 };
 
@@ -35,9 +37,15 @@ export function RunNowButton() {
         skipped += counts.skipped;
         failed += counts.failed;
       }
-      toast.success(
-        `自動配信を実行しました（送信${sent}件・スキップ${skipped}件${failed > 0 ? `・失敗${failed}件` : ""}）`,
-      );
+      const detail = `送信${sent}件・スキップ${skipped}件${failed > 0 ? `・失敗${failed}件` : ""}`;
+      // errors は自店舗の実行で発生したものだけが入る
+      if (data.errors && data.errors.length > 0) {
+        toast.error(`自動配信の実行中にエラーが発生しました（${detail}）`, {
+          description: data.errors[0],
+        });
+      } else {
+        toast.success(`自動配信を実行しました（${detail}）`);
+      }
       router.refresh();
     } finally {
       setRunning(false);

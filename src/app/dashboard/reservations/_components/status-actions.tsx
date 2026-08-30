@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ReservationStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,8 @@ export function StatusActions({ id, status }: { id: string; status: ReservationS
   const [pending, setPending] = React.useState<ActionKey | null>(null);
   const [cancelOpen, setCancelOpen] = React.useState(false);
   const [cancelReason, setCancelReason] = React.useState("");
+  const [noShowOpen, setNoShowOpen] = React.useState(false);
+  const [restoreOpen, setRestoreOpen] = React.useState(false);
 
   const submitting = pending !== null;
 
@@ -42,10 +45,13 @@ export function StatusActions({ id, status }: { id: string; status: ReservationS
   ): Promise<boolean> {
     setPending(key);
     try {
-      const body: Record<string, unknown> = { status: next };
+      // 操作キーをそのままAPIのアクションに対応させる。
+      // 確定を取り消す操作だけ「未確定に戻す」= unconfirm という名前にしている。
+      const action = key === "pending" ? "unconfirm" : key;
+      const body: Record<string, unknown> = { action };
       if (reason !== undefined) body.cancelReason = reason;
-      const res = await fetch(`/api/reservations/${id}/status`, {
-        method: "POST",
+      const res = await fetch(`/api/reservations/${id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
@@ -57,6 +63,39 @@ export function StatusActions({ id, status }: { id: string; status: ReservationS
       toast.success(message);
       router.refresh();
       return true;
+    } finally {
+      setPending(null);
+    }
+  }
+
+  /**
+   * キャンセル・無断キャンセルの予約を確定に戻す。
+   * 空き枠の確認とお客様への予約確認通知を行うため、
+   * 汎用のステータス変更ではなく専用の復元APIを使う。
+   */
+  async function restoreReservation(): Promise<void> {
+    setPending("restore");
+    try {
+      const res = await fetch(`/api/reservations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore" }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        notified?: boolean;
+      };
+      if (!res.ok) {
+        toast.error(data.error ?? "予約の復元に失敗しました");
+        return;
+      }
+      toast.success(
+        data.notified
+          ? "予約を復元し、お客様に予約確認を送信しました"
+          : "予約を復元しました"
+      );
+      setRestoreOpen(false);
+      router.refresh();
     } finally {
       setPending(null);
     }
@@ -109,9 +148,7 @@ export function StatusActions({ id, status }: { id: string; status: ReservationS
             variant="outline"
             className="border-red-200 text-red-600 hover:bg-red-50"
             disabled={submitting}
-            onClick={() =>
-              changeStatus("no_show", "NO_SHOW", "無断キャンセルとして記録しました")
-            }
+            onClick={() => setNoShowOpen(true)}
           >
             {label("no_show", "無断キャンセルにする")}
           </Button>
@@ -130,11 +167,39 @@ export function StatusActions({ id, status }: { id: string; status: ReservationS
         <Button
           variant="outline"
           disabled={submitting}
-          onClick={() => changeStatus("restore", "CONFIRMED", "予約を復元しました")}
+          onClick={() => setRestoreOpen(true)}
         >
           {label("restore", "予約を復元する")}
         </Button>
       )}
+
+      <ConfirmDialog
+        open={noShowOpen}
+        onOpenChange={setNoShowOpen}
+        title="無断キャンセルとして記録"
+        description="この予約を無断キャンセルとして記録します。お客様の来店履歴に残り、来店実績には計上されません。お客様へメッセージは送信されません。"
+        confirmLabel="無断キャンセルにする"
+        destructive
+        loading={pending === "no_show"}
+        onConfirm={async () => {
+          const ok = await changeStatus(
+            "no_show",
+            "NO_SHOW",
+            "無断キャンセルとして記録しました"
+          );
+          if (ok) setNoShowOpen(false);
+        }}
+      />
+
+      <ConfirmDialog
+        open={restoreOpen}
+        onOpenChange={setRestoreOpen}
+        title="予約を復元"
+        description="この予約を「確定」に戻します。元の日時にすでに別の予約が入っている場合は復元できません。これから先の予約で予約確認の自動配信が有効な場合は、お客様のLINEへ予約確認のメッセージが送信されます。"
+        confirmLabel="復元する"
+        loading={pending === "restore"}
+        onConfirm={restoreReservation}
+      />
 
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent>
