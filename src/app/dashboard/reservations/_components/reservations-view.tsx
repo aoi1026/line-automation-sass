@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarX2, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarRange, CalendarX2, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn, formatNumber, formatYen } from "@/lib/utils";
 import { addDays, fromJst, jstYmd } from "@/lib/jst";
 import {
@@ -12,7 +12,7 @@ import {
   RESERVATION_STATUS_LABELS,
 } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ import { ReservationRowActions } from "./reservation-row-actions";
 import {
   STATUS_FILTERS,
   type ReservationRow,
+  type ReservationView,
   type StatusFilter,
   type WeekDay,
 } from "./types";
@@ -56,33 +57,43 @@ export function ReservationsView({
   view,
   dateLabel,
   pendingCount,
-  dayRows,
+  listRows,
+  listLimited = false,
   weekDays,
   createAction,
 }: {
   date: string;
   todayYmd: string;
   status: StatusFilter;
-  view: "day" | "week";
-  /** 日別: 「2026年8月26日(水)」 / 週間: 「8月25日(月)〜8月31日(日)」 */
+  view: ReservationView;
+  /** 日別: 「2026年8月26日(水)」 / 週間: 「8月25日(月)〜8月31日(日)」 / 今後: 「2026年8月26日(水)以降」 */
   dateLabel: string;
   /** 表示期間内の未確定（PENDING）件数 */
   pendingCount: number;
-  dayRows: ReservationRow[];
+  /** 日別・今後の予約で一覧表示する行（週間ビューでは空） */
+  listRows: ReservationRow[];
+  /** 今後の予約が上限件数で打ち切られているか */
+  listLimited?: boolean;
   weekDays: WeekDay[];
   /** 予約が0件のときに空状態へ出す操作（予約作成ダイアログ） */
   createAction?: React.ReactNode;
 }) {
   const router = useRouter();
 
-  function navigate(next: { date?: string; status?: StatusFilter; view?: "day" | "week" }) {
+  function navigate(next: { date?: string; status?: StatusFilter; view?: ReservationView }) {
     const q = new URLSearchParams();
-    q.set("date", next.date ?? date);
+    const v = next.view ?? view;
+    // 今後の予約は日付で絞り込まないため、date は付けない
+    if (v !== "upcoming") q.set("date", next.date ?? date);
     const s = next.status ?? status;
     if (s !== "ALL") q.set("status", s);
-    const v = next.view ?? view;
     if (v !== "day") q.set("view", v);
     router.push(`/dashboard/reservations?${q.toString()}`);
+  }
+
+  /** 一覧の表示単位を切り替える */
+  function changeView(value: string) {
+    navigate({ view: value === "week" ? "week" : value === "upcoming" ? "upcoming" : "day" });
   }
 
   const stepDays = view === "week" ? 7 : 1;
@@ -92,53 +103,64 @@ export function ReservationsView({
     <div>
       {/* ツールバー */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Tabs
-          value={view}
-          onValueChange={(v) => navigate({ view: v === "week" ? "week" : "day" })}
-        >
-          <TabsList aria-label="表示単位の切り替え">
+        <Tabs value={view} onValueChange={changeView}>
+          <TabsList aria-label="一覧の表示切り替え">
             <TabsTrigger value="day">日別</TabsTrigger>
             <TabsTrigger value="week">週間</TabsTrigger>
+            <TabsTrigger value="upcoming">今後</TabsTrigger>
           </TabsList>
         </Tabs>
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label={`前の${unit}へ`}
-          onClick={() => navigate({ date: shiftYmd(date, -stepDays) })}
+        {/* タイムグリッドのカレンダー表示へ（カレンダー側に「一覧に戻る」あり） */}
+        <Link
+          href={`/dashboard/reservations/calendar?date=${date}`}
+          aria-label="カレンダー表示に切り替え"
+          className={buttonVariants({ variant: "outline" })}
         >
-          <ChevronLeft aria-hidden="true" />
-        </Button>
-        <div className="w-36 shrink-0 sm:w-40">
-          <Label htmlFor="reservations-date" className="sr-only">
-            表示する日付
-          </Label>
-          <Input
-            id="reservations-date"
-            type="date"
-            value={date}
-            onChange={(e) => {
-              if (e.target.value) navigate({ date: e.target.value });
-            }}
-          />
-        </div>
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label={`次の${unit}へ`}
-          onClick={() => navigate({ date: shiftYmd(date, stepDays) })}
-        >
-          <ChevronRight aria-hidden="true" />
-        </Button>
-        <Button
-          variant="outline"
-          className="h-10"
-          aria-label="今日へ移動"
-          onClick={() => navigate({ date: todayYmd })}
-          disabled={view === "day" && date === todayYmd}
-        >
-          今日
-        </Button>
+          <CalendarRange aria-hidden="true" />
+          カレンダー
+        </Link>
+        {view !== "upcoming" && (
+          <>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={`前の${unit}へ`}
+              onClick={() => navigate({ date: shiftYmd(date, -stepDays) })}
+            >
+              <ChevronLeft aria-hidden="true" />
+            </Button>
+            <div className="w-36 shrink-0 sm:w-40">
+              <Label htmlFor="reservations-date" className="sr-only">
+                表示する日付
+              </Label>
+              <Input
+                id="reservations-date"
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  if (e.target.value) navigate({ date: e.target.value });
+                }}
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={`次の${unit}へ`}
+              onClick={() => navigate({ date: shiftYmd(date, stepDays) })}
+            >
+              <ChevronRight aria-hidden="true" />
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10"
+              aria-label="今日へ移動"
+              onClick={() => navigate({ date: todayYmd })}
+              disabled={view === "day" && date === todayYmd}
+            >
+              今日
+            </Button>
+          </>
+        )}
         <div className="ml-auto flex items-center gap-2">
           {pendingCount > 0 && (
             <button
@@ -177,39 +199,45 @@ export function ReservationsView({
 
       <p className="mb-3 text-sm font-medium text-gray-700">
         {dateLabel}の予約
-        {view === "day" && dayRows.length > 0 && (
+        {view !== "week" && listRows.length > 0 && (
           <span className="ml-2 text-xs font-normal text-gray-400">
-            {formatNumber(dayRows.length)}件
+            {formatNumber(listRows.length)}件
+            {listLimited && "（上限まで表示中）"}
           </span>
         )}
       </p>
 
-      {view === "day" ? (
-        <DayView
-          rows={dayRows}
-          status={status}
-          createAction={createAction}
-          onResetFilter={() => navigate({ status: "ALL" })}
-        />
-      ) : (
+      {view === "week" ? (
         <WeekView
           days={weekDays}
           todayYmd={todayYmd}
           onSelectDay={(ymd) => navigate({ date: ymd, view: "day" })}
+        />
+      ) : (
+        <ListView
+          rows={listRows}
+          status={status}
+          upcoming={view === "upcoming"}
+          createAction={createAction}
+          onResetFilter={() => navigate({ status: "ALL" })}
         />
       )}
     </div>
   );
 }
 
-function DayView({
+/** 日別・今後の予約の一覧（今後の予約では日付列を表示する） */
+function ListView({
   rows,
   status,
+  upcoming,
   createAction,
   onResetFilter,
 }: {
   rows: ReservationRow[];
   status: StatusFilter;
+  /** 今後の予約（日付をまたぐ）表示か */
+  upcoming: boolean;
   createAction?: React.ReactNode;
   onResetFilter: () => void;
 }) {
@@ -220,7 +248,11 @@ function DayView({
         <EmptyState
           icon={<CalendarX2 aria-hidden="true" />}
           title="条件に合う予約がありません"
-          description={`この日に「${RESERVATION_STATUS_LABELS[status]}」の予約はありません。絞り込みを解除すると、ほかの予約を確認できます。`}
+          description={
+            upcoming
+              ? `今日以降に「${RESERVATION_STATUS_LABELS[status]}」の予約はありません。絞り込みを解除すると、ほかの予約を確認できます。`
+              : `この日に「${RESERVATION_STATUS_LABELS[status]}」の予約はありません。絞り込みを解除すると、ほかの予約を確認できます。`
+          }
           action={
             <Button variant="outline" size="sm" onClick={onResetFilter}>
               絞り込みを解除
@@ -232,7 +264,7 @@ function DayView({
     return (
       <EmptyState
         icon={<CalendarX2 aria-hidden="true" />}
-        title="この日の予約はまだありません"
+        title={upcoming ? "今後の予約はまだありません" : "この日の予約はまだありません"}
         description="「予約を作成」から、お客様・メニュー・時刻を選んで登録できます。"
         action={createAction}
       />
@@ -246,6 +278,7 @@ function DayView({
         <Table>
           <TableHeader>
             <TableRow>
+              {upcoming && <TableHead>日付</TableHead>}
               <TableHead>時間</TableHead>
               <TableHead>顧客名</TableHead>
               <TableHead>メニュー</TableHead>
@@ -261,6 +294,9 @@ function DayView({
           <TableBody>
             {rows.map((row) => (
               <TableRow key={row.id}>
+                {upcoming && (
+                  <TableCell className="whitespace-nowrap text-gray-600">{row.dateLabel}</TableCell>
+                )}
                 <TableCell className="whitespace-nowrap font-medium tabular-nums text-gray-900">
                   {row.startTime}–{row.endTime}
                 </TableCell>
@@ -306,6 +342,7 @@ function DayView({
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold tabular-nums text-gray-900">
+                  {upcoming && <span className="mr-1.5 font-medium">{row.dateLabel}</span>}
                   {row.startTime}–{row.endTime}
                 </p>
                 <Link

@@ -1,6 +1,6 @@
 import {
   BarChart3, CalendarDays, ClipboardList, FileText, Filter,
-  LayoutDashboard, Megaphone, MessageSquareText, Settings, Ticket, Users, Zap,
+  LayoutDashboard, Megaphone, MessageSquareText, Rocket, Settings, Ticket, Users, Zap,
 } from "lucide-react";
 
 export type NavItem = {
@@ -22,6 +22,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/coupons", label: "クーポン", icon: Ticket },
   { href: "/dashboard/surveys", label: "アンケート", icon: ClipboardList },
   { href: "/dashboard/analytics", label: "分析レポート", icon: BarChart3 },
+  { href: "/dashboard/setup", label: "セットアップガイド", icon: Rocket },
   { href: "/dashboard/settings", label: "設定", icon: Settings },
 ];
 

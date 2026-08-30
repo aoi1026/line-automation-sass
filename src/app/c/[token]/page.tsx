@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { TicketX } from "lucide-react";
+import { Info, TicketX } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { CouponCard } from "./coupon-card";
-import { RedeemSection } from "./redeem-section";
 
 export const dynamic = "force-dynamic";
 
@@ -87,13 +86,23 @@ export default async function PublicCouponPage({
           now={now}
         />
 
+        {/*
+          使用済みへの変更は店舗スタッフが管理画面から行う。
+          お客様の端末から消し込めるとご自身で使用済みにできてしまうため、
+          公開ページでは提示のご案内のみを表示する。
+        */}
         {redeemable && (
-          <>
-            <p className="mt-4 text-center text-xs leading-relaxed text-gray-500">
+          <div className="mt-4 space-y-3">
+            <p className="text-center text-xs leading-relaxed text-gray-500">
               画面の明るさを上げてご提示いただくと、スタッフが確認しやすくなります。
             </p>
-            <RedeemSection token={issue.token} />
-          </>
+            <div className="flex items-start gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3">
+              <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+              <p className="text-xs leading-relaxed text-gray-600">
+                クーポンを使用済みにする手続きは、ご来店時に店舗スタッフが行います。お客様ご自身での操作は必要ありません。
+              </p>
+            </div>
+          </div>
         )}
 
         <p className="mt-8 text-center text-xs text-gray-400">{coupon.store.name}</p>

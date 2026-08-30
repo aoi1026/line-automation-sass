@@ -71,7 +71,13 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
             </CardDescription>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={hide} className="shrink-0 text-gray-500">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={hide}
+          aria-label="セットアップガイドを閉じる（メニューからいつでも開けます）"
+          className="shrink-0 text-gray-500"
+        >
           あとで
         </Button>
       </CardHeader>
@@ -142,14 +148,19 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
           ))}
         </ul>
 
-        <Link
-          href="/dashboard/setup"
-          className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-brand-dark hover:underline"
-        >
-          <BookOpen aria-hidden="true" className="h-4 w-4" />
-          詳しいセットアップガイド
-          <ArrowRight aria-hidden="true" className="h-4 w-4" />
-        </Link>
+        <div className="flex flex-col gap-1">
+          <Link
+            href="/dashboard/setup"
+            className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-brand-dark hover:underline"
+          >
+            <BookOpen aria-hidden="true" className="h-4 w-4" />
+            詳しいセットアップガイド
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
+          </Link>
+          <p className="text-xs text-gray-500">
+            「あとで」で閉じたあとも、メニューの「セットアップガイド」からいつでも確認できます。
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

@@ -16,8 +16,11 @@ const patchSchema = z.discriminatedUnion("action", [
     cancelReason: z.string().max(500, "キャンセル理由が長すぎます").optional(),
   }),
   z.object({ action: z.literal("no_show") }),
+  // 確定 → 未確定に戻す
+  z.object({ action: z.literal("unconfirm") }),
   z.object({ action: z.literal("complete") }),
   z.object({ action: z.literal("uncomplete") }),
+  z.object({ action: z.literal("restore") }),
   z.object({
     action: z.literal("reschedule"),
     date: z.string().regex(DATE_RE, "日付の形式が不正です"),
@@ -54,7 +57,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   return NextResponse.json(reservation);
 }
 
-/** 予約への操作（確定・キャンセル・無断キャンセル・来店済み・取り消し・日時変更） */
+/** 予約への操作（確定・キャンセル・無断キャンセル・来店済み・取り消し・復元・日時変更） */
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const session = await getApiSession();
   if (!session) return unauthorized();
@@ -82,6 +85,20 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       return NextResponse.json(updated);
     }
 
+    // 確定 → 未確定に戻す（お客様への通知は行わない）
+    case "unconfirm": {
+      if (reservation.status !== "CONFIRMED") return invalidTransition();
+      const claimed = await prisma.reservation.updateMany({
+        where: { id: reservation.id, status: "CONFIRMED" },
+        data: { status: "PENDING" },
+      });
+      if (claimed.count === 0) return invalidTransition();
+      const updated = await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservation.id },
+      });
+      return NextResponse.json(updated);
+    }
+
     // 未確定・確定 → キャンセル（キャンセル通知）
     case "cancel": {
       if (!isActive) return invalidTransition();
@@ -101,6 +118,54 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         data: { status: "NO_SHOW" },
       });
       return NextResponse.json(updated);
+    }
+
+    // キャンセル・無断キャンセル → 確定に戻す（復元）
+    //
+    // キャンセル中に同じ時間帯へ別の予約が入っていることがあるため、
+    // 元の日時が空いているかを必ず確認してから戻す（ダブルブッキング防止）。
+    // 戻したあとは、キャンセル通知を受け取ったお客様に予約が有効であることが
+    // 伝わるよう、予約確認の通知を送る。
+    case "restore": {
+      if (reservation.status !== "CANCELLED" && reservation.status !== "NO_SHOW") {
+        return invalidTransition();
+      }
+
+      const conflict = await findReservationConflict({
+        storeId: session.storeId,
+        startAt: reservation.startAt,
+        endAt: reservation.endAt,
+        staffId: reservation.staffId,
+        excludeReservationId: reservation.id,
+      });
+      if (conflict) {
+        return jsonError(
+          conflict === "staff"
+            ? "元の時間帯には、担当者に別の予約が入っているため復元できません。日時か担当者を変更してからお試しください。"
+            : "元の時間帯はすでに別の予約で埋まっているため復元できません。日時を変更してからお試しください。"
+        );
+      }
+
+      // 同時操作で二重に復元・通知しないよう、ステータス条件付きで確保する
+      const claimed = await prisma.reservation.updateMany({
+        where: { id: reservation.id, status: { in: ["CANCELLED", "NO_SHOW"] } },
+        data: { status: "CONFIRMED", cancelReason: "" },
+      });
+      if (claimed.count === 0) return invalidTransition();
+
+      const updated = await prisma.reservation.findUniqueOrThrow({
+        where: { id: reservation.id },
+      });
+
+      // 予約日時がこれから先の場合のみ通知する。
+      // 過去の予約の記録訂正（無断キャンセルの取り消しなど）でも復元は行われるため、
+      // 「ご来店をお待ちしております」という予約確認が後追いで届かないようにする。
+      let notified = false;
+      if (updated.startAt.getTime() > Date.now()) {
+        const log = await notifyReservationEvent(reservation.id, "BOOKING_CONFIRMATION");
+        notified = log?.status === "SENT";
+      }
+      return NextResponse.json({ ...updated, notified });
     }
 
     // 未確定・確定 → 来店済み（顧客統計を加算）

@@ -2,14 +2,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Search, Upload } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { TagManageDialog, type TagOption } from "./tag-manage-dialog";
 import { CustomersExportButton } from "./customers-export-button";
-import { CustomersImportDialog } from "./customers-import-dialog";
 
 /** タグ絞り込みチップの共通クラス */
 const CHIP_CLASS =
@@ -31,6 +31,7 @@ export function CustomersToolbar({
   const [q, setQ] = React.useState(initialQ);
 
   function apply(nextQ: string, nextTag: string) {
+    // 絞り込みを変えたら結果の並びが変わるため、ページ番号は引き継がず1ページ目に戻す
     const params = new URLSearchParams();
     const trimmed = nextQ.trim();
     if (trimmed) params.set("q", trimmed);
@@ -72,7 +73,14 @@ export function CustomersToolbar({
           <TagManageDialog tags={tags} />
           {/* 書き出しは画面の絞り込み（検索・タグ）をそのまま引き継ぐ */}
           <CustomersExportButton q={initialQ} tagId={initialTag} />
-          <CustomersImportDialog />
+          {/* 取り込み口はインポートウィザードに一本化している */}
+          <Link
+            href="/dashboard/customers/import"
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <Upload aria-hidden="true" />
+            CSVで取り込み
+          </Link>
         </div>
       </form>
 

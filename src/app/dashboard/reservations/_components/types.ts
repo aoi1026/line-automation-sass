@@ -5,6 +5,8 @@ export type ReservationRow = {
   id: string;
   /** "YYYY-MM-DD"（JST） */
   ymd: string;
+  /** 「8月26日(水)」（日付をまたぐ一覧で使用） */
+  dateLabel: string;
   /** "HH:mm"（JST） */
   startTime: string;
   /** "HH:mm"（JST） */
@@ -32,6 +34,15 @@ export type WeekDay = {
 export type CustomerOption = { id: string; name: string; kana: string };
 export type ServiceOption = { id: string; name: string; price: number; durationMin: number };
 export type StaffOption = { id: string; name: string };
+
+/** 予約一覧の表示単位（upcoming = 日付で絞り込まない今後の予約） */
+export const RESERVATION_VIEWS = ["day", "week", "upcoming"] as const;
+export type ReservationView = (typeof RESERVATION_VIEWS)[number];
+
+/** URLの view パラメータを表示単位に正規化する（不正値は日別） */
+export function normalizeReservationView(raw: string | undefined): ReservationView {
+  return RESERVATION_VIEWS.includes(raw as ReservationView) ? (raw as ReservationView) : "day";
+}
 
 /** ステータスフィルタの選択肢（ALL = 絞り込みなし） */
 export const STATUS_FILTERS = [
