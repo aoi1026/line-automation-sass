@@ -13,6 +13,9 @@ import { emptyCounts, tally } from "./types";
  * - 最終来店から180日以上経過した顧客には送らない（休眠顧客はキャンペーンで対応）
  * - 同一来店サイクル内での重複送信はしない（最終来店以降に送信済みならスキップ）
  * - 設定された送信時刻（JST）以降の実行時のみ送信
+ *
+ * 毎分実行されるため、判定に必要な送信履歴・直近の来店メニューは
+ * 顧客ごとに問い合わせず、対象顧客ぶんをまとめて取得してメモリ上で突き合わせる。
  */
 export async function runRebooking(store: Store, now: Date): Promise<KindCounts> {
   const counts = emptyCounts();
@@ -30,28 +33,59 @@ export async function runRebooking(store: Store, now: Date): Promise<KindCounts>
       },
     },
   });
+  if (customers.length === 0) return counts;
+
+  const customerIds = customers.map((c) => c.id);
+
+  // 対象顧客の中で最も古い最終来店日時。これより前の送信履歴は誰の判定にも影響しない。
+  let oldestLastVisitMs = now.getTime();
+  for (const customer of customers) {
+    const t = customer.lastVisitAt?.getTime();
+    if (t !== undefined && t < oldestLastVisitMs) oldestLastVisitMs = t;
+  }
+
+  const [sentGroups, lastCompletedReservations] = await Promise.all([
+    // 顧客ごとの「最後に再来店リマインドを送った日時」
+    prisma.messageLog.groupBy({
+      by: ["customerId"],
+      where: {
+        storeId: store.id,
+        customerId: { in: customerIds },
+        kind: "REBOOKING",
+        sentAt: { gt: new Date(oldestLastVisitMs) },
+      },
+      _max: { sentAt: true },
+    }),
+    // 顧客ごとの「最後に受けたメニュー」の推奨再来店間隔
+    prisma.reservation.findMany({
+      where: { storeId: store.id, customerId: { in: customerIds }, status: "COMPLETED" },
+      orderBy: [{ customerId: "asc" }, { startAt: "desc" }],
+      distinct: ["customerId"],
+      select: { customerId: true, service: { select: { repeatIntervalDays: true } } },
+    }),
+  ]);
+
+  const lastSentAtByCustomer = new Map<string, Date>();
+  for (const group of sentGroups) {
+    const sentAt = group._max.sentAt;
+    if (group.customerId && sentAt) lastSentAtByCustomer.set(group.customerId, sentAt);
+  }
+
+  const intervalByCustomer = new Map<string, number | null>();
+  for (const reservation of lastCompletedReservations) {
+    intervalByCustomer.set(reservation.customerId, reservation.service?.repeatIntervalDays ?? null);
+  }
 
   for (const customer of customers) {
     const lastVisitAt = customer.lastVisitAt;
     if (!lastVisitAt) continue;
 
     // 同一来店サイクル内の重複送信防止
-    const alreadySent = await prisma.messageLog.findFirst({
-      where: {
-        customerId: customer.id, kind: "REBOOKING", sentAt: { gt: lastVisitAt },
-      },
-      select: { id: true },
-    });
-    if (alreadySent) continue;
+    const lastSentAt = lastSentAtByCustomer.get(customer.id);
+    if (lastSentAt && lastSentAt > lastVisitAt) continue;
 
-    // 最後に受けたメニューの推奨間隔を取得
-    const lastCompleted = await prisma.reservation.findFirst({
-      where: { customerId: customer.id, status: "COMPLETED" },
-      orderBy: { startAt: "desc" },
-      include: { service: true },
-    });
     const intervalDays =
-      lastCompleted?.service?.repeatIntervalDays ?? store.defaultRebookingIntervalDays;
+      intervalByCustomer.get(customer.id) ?? store.defaultRebookingIntervalDays;
     const dueAt = addDays(lastVisitAt, intervalDays);
     if (dueAt > now) continue;
 

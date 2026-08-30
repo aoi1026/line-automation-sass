@@ -24,15 +24,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  TIME_OPTIONS,
-  type CustomerOption,
-  type ServiceOption,
-  type StaffOption,
-} from "./types";
+import type { CustomerOption, ServiceOption, StaffOption } from "./types";
 
 const NONE = "none";
+
+/** 時刻の指定方法（空き枠から選ぶ / 営業時間外も含めて直接入力する） */
+type TimeMode = "slot" | "manual";
 
 export function CreateReservationDialog({
   customers,
@@ -54,9 +53,51 @@ export function CreateReservationDialog({
   const [serviceId, setServiceId] = React.useState(NONE);
   const [staffId, setStaffId] = React.useState(NONE);
   const [date, setDate] = React.useState(defaultDate);
-  const [time, setTime] = React.useState("10:00");
+  const [time, setTime] = React.useState("");
+  const [timeMode, setTimeMode] = React.useState<TimeMode>("slot");
+  const [slots, setSlots] = React.useState<string[]>([]);
+  const [slotsLoading, setSlotsLoading] = React.useState(false);
   const [price, setPrice] = React.useState("0");
   const [note, setNote] = React.useState("");
+
+  // 空き枠の取得（日付・メニュー・担当の変更で再取得。予約編集フォームと同じAPIを使う）
+  React.useEffect(() => {
+    if (!open || !date) {
+      setSlots([]);
+      setSlotsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    async function load() {
+      setSlotsLoading(true);
+      try {
+        const q = new URLSearchParams({ date });
+        if (serviceId !== NONE) q.set("serviceId", serviceId);
+        if (staffId !== NONE) q.set("staffId", staffId);
+        const res = await fetch(`/api/reservations/slots?${q.toString()}`);
+        if (!res.ok) {
+          if (!cancelled) setSlots([]);
+          return;
+        }
+        const data = (await res.json()) as { slots: string[] };
+        if (!cancelled) setSlots(data.slots);
+      } catch {
+        if (!cancelled) setSlots([]);
+      } finally {
+        if (!cancelled) setSlotsLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, date, serviceId, staffId]);
+
+  // 空き枠モードで、選択中の時刻が空き枠から外れたら選択を解除する
+  React.useEffect(() => {
+    if (timeMode !== "slot" || slotsLoading) return;
+    if (time && !slots.includes(time)) setTime("");
+  }, [timeMode, slotsLoading, slots, time]);
 
   const selectedService = services.find((s) => s.id === serviceId) ?? null;
   const selectedCustomer = customers.find((c) => c.id === customerId) ?? null;
@@ -74,9 +115,20 @@ export function CreateReservationDialog({
     setServiceId(NONE);
     setStaffId(NONE);
     setDate(defaultDate);
-    setTime("10:00");
+    setTime("");
+    setTimeMode("slot");
+    setSlots([]);
+    // 開いた直後に「空き枠がありません」が一瞬見えないよう、取得中から始める
+    setSlotsLoading(true);
     setPrice("0");
     setNote("");
+  }
+
+  function handleTimeModeChange(value: string) {
+    const next: TimeMode = value === "manual" ? "manual" : "slot";
+    setTimeMode(next);
+    // 空き枠モードに戻したとき、直接入力した時刻が空き枠に無ければ選択を解除する
+    if (next === "slot" && time && !slots.includes(time)) setTime("");
   }
 
   function handleOpenChange(next: boolean) {
@@ -95,8 +147,12 @@ export function CreateReservationDialog({
       toast.error("顧客を選択してください");
       return;
     }
-    if (!date || !time) {
-      toast.error("日付と時刻を入力してください");
+    if (!date) {
+      toast.error("日付を選択してください");
+      return;
+    }
+    if (!time) {
+      toast.error("時刻を選択してください");
       return;
     }
     const priceValue = Number(price);
@@ -132,6 +188,12 @@ export function CreateReservationDialog({
       setBusy(false);
     }
   }
+
+  const slotPlaceholder = slotsLoading
+    ? "読み込み中…"
+    : slots.length === 0
+      ? "空き枠がありません"
+      : "時刻を選択";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -244,19 +306,64 @@ export function CreateReservationDialog({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="reservation-time">時刻</Label>
-              <Select value={time} onValueChange={setTime}>
-                <SelectTrigger id="reservation-time">
-                  <SelectValue placeholder="時刻を選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIME_OPTIONS.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label
+                  htmlFor={
+                    timeMode === "slot" ? "reservation-time" : "reservation-time-manual"
+                  }
+                >
+                  時刻
+                </Label>
+                <Tabs value={timeMode} onValueChange={handleTimeModeChange}>
+                  <TabsList aria-label="時刻の指定方法" className="h-8">
+                    <TabsTrigger value="slot" className="px-2 text-xs">
+                      空き枠から選ぶ
+                    </TabsTrigger>
+                    <TabsTrigger value="manual" className="px-2 text-xs">
+                      時刻を直接入力
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+              {timeMode === "slot" ? (
+                <>
+                  <Select
+                    key={`${date}-${serviceId}-${staffId}`}
+                    value={time || undefined}
+                    onValueChange={setTime}
+                    disabled={slotsLoading || slots.length === 0}
+                  >
+                    <SelectTrigger id="reservation-time">
+                      <SelectValue placeholder={slotPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {slots.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {date && !slotsLoading && slots.length === 0 && (
+                    <p className="text-xs text-amber-700" role="status">
+                      この日は空き枠がありません。日付・メニュー・担当を変えるか、「時刻を直接入力」でご登録ください。
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Input
+                    id="reservation-time-manual"
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    aria-describedby="reservation-time-manual-help"
+                  />
+                  <p id="reservation-time-manual-help" className="text-xs text-gray-500">
+                    営業時間外の時刻も登録できます。お電話でお受けした予約の記録などにお使いください。
+                  </p>
+                </>
+              )}
             </div>
           </div>
 

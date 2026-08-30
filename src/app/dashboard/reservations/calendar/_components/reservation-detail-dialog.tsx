@@ -45,14 +45,14 @@ export function ReservationDetailDialog({
   const router = useRouter();
   const [submitting, setSubmitting] = React.useState(false);
 
-  async function changeStatus(next: ReservationStatus, message: string) {
+  async function changeStatus(action: "confirm" | "complete", message: string) {
     if (!block) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/reservations/${block.id}/status`, {
-        method: "POST",
+      const res = await fetch(`/api/reservations/${block.id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next }),
+        body: JSON.stringify({ action }),
       });
       if (!res.ok) {
         const json = (await res.json().catch(() => ({}))) as { error?: string };
@@ -116,7 +116,7 @@ export function ReservationDetailDialog({
                 <Button
                   variant="secondary"
                   disabled={submitting}
-                  onClick={() => void changeStatus("CONFIRMED", "予約を確定しました")}
+                  onClick={() => void changeStatus("confirm", "予約を確定しました")}
                 >
                   {submitting ? "処理中…" : "確定する"}
                 </Button>
@@ -124,7 +124,7 @@ export function ReservationDetailDialog({
               {(block.status === "PENDING" || block.status === "CONFIRMED") && (
                 <Button
                   disabled={submitting}
-                  onClick={() => void changeStatus("COMPLETED", "来店済みにしました")}
+                  onClick={() => void changeStatus("complete", "来店済みにしました")}
                 >
                   {submitting ? "処理中…" : "来店済みにする"}
                 </Button>

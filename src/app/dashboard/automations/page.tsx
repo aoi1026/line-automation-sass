@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import type { MessageKind } from "@prisma/client";
 import { Info, Zap } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { isLineConfigured } from "@/lib/line/client";
 import { AUTOMATION_KINDS } from "@/lib/constants";
+import { formatJstDateTime } from "@/lib/jst";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import {
@@ -14,9 +16,30 @@ import { RunNowButton } from "./_components/run-now-button";
 
 export const metadata: Metadata = { title: "自動配信設定" };
 
-function intervalLabel(): string {
-  const raw = Number(process.env.AUTOMATION_INTERVAL_MS ?? "60000");
-  const ms = Number.isFinite(raw) && raw > 0 ? raw : 60000;
+/**
+ * 定期実行のエンジンが送信する種別。
+ * 予約確認・キャンセル・日時変更は予約の操作時にその場で送信されるため、
+ * 「自動配信が動いているか」の手がかりには使わない。
+ */
+const SCHEDULED_KINDS: MessageKind[] = [
+  "REMINDER",
+  "THANKS",
+  "REBOOKING",
+  "BIRTHDAY",
+  "CAMPAIGN",
+];
+
+/**
+ * アプリ内スケジューラの実行間隔（ミリ秒）。未設定・短すぎる値の場合は起動しないため null。
+ * 判定条件は src/instrumentation.ts と揃えること。
+ */
+function schedulerIntervalMs(): number | null {
+  const raw = Number(process.env.AUTOMATION_INTERVAL_MS ?? "");
+  if (!Number.isFinite(raw) || raw < 10000) return null;
+  return raw;
+}
+
+function intervalLabel(ms: number): string {
   if (ms % 60000 === 0) return `${ms / 60000}分`;
   return `${Math.round(ms / 1000)}秒`;
 }
@@ -24,7 +47,7 @@ function intervalLabel(): string {
 export default async function AutomationsPage() {
   const session = await requireSession();
 
-  const [store, settings, templates, coupons, surveys] = await Promise.all([
+  const [store, settings, templates, coupons, surveys, lastScheduledLog] = await Promise.all([
     prisma.store.findUniqueOrThrow({
       where: { id: session.storeId },
       select: { lineChannelAccessToken: true },
@@ -49,10 +72,17 @@ export default async function AutomationsPage() {
       orderBy: { createdAt: "desc" },
       select: { id: true, title: true, active: true },
     }),
+    // 自動配信が実際に動いているかの手がかり（直近の自動配信メッセージの送信時刻）
+    prisma.messageLog.findFirst({
+      where: { storeId: session.storeId, kind: { in: SCHEDULED_KINDS } },
+      orderBy: { sentAt: "desc" },
+      select: { sentAt: true },
+    }),
   ]);
 
   const settingByKind = new Map(settings.map((s) => [s.kind, s]));
   const demoMode = !isLineConfigured(store);
+  const intervalMs = schedulerIntervalMs();
 
   return (
     <>
@@ -85,8 +115,17 @@ export default async function AutomationsPage() {
               自動配信のしくみ
             </p>
             <p className="mt-1 text-sm leading-relaxed text-gray-500">
-              自動配信は約{intervalLabel()}
-              ごとにバックグラウンドで自動実行されています。送信済みの判定はメッセージ履歴に基づいて行われるため、何度実行されても同じメッセージが重複して送信されることはありません。
+              自動配信は、条件に合うお客様をバックグラウンドで定期的に探して送信するしくみです。送信済みの判定はメッセージ履歴に基づいて行われるため、何度実行されても同じメッセージが重複して送信されることはありません。
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-gray-500">
+              {lastScheduledLog
+                ? `最後に自動配信が行われたのは ${formatJstDateTime(lastScheduledLog.sentAt)} です。`
+                : "自動配信によるメッセージは、まだ一度も送信されていません。"}
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-gray-500">
+              {intervalMs
+                ? `このサーバーでは約${intervalLabel(intervalMs)}ごとに自動実行される設定になっています。`
+                : "このサーバーでは定期実行が設定されていないため、外部の定期実行（cron）から呼び出されたときと、ページ上部の「今すぐ実行」を押したときにだけ動きます。自動でお届けするには、サーバーの定期実行の設定をご確認ください。"}
             </p>
           </div>
         </CardContent>

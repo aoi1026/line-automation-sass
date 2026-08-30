@@ -23,12 +23,15 @@ export function parseRules(raw: unknown): SegmentRules {
   return result.success ? result.data : {};
 }
 
-/** 条件に合致する顧客を抽出 */
-export async function resolveTargets(
+/**
+ * 抽出条件を Prisma の where に変換する（誕生月以外はすべてDB側で絞り込める）。
+ * 誕生月はJST基準の月比較が必要なためここには含めず、取得後にJS側で絞り込む。
+ */
+export function buildTargetWhere(
   storeId: string,
   rules: SegmentRules,
   now = new Date()
-): Promise<Customer[]> {
+): Prisma.CustomerWhereInput {
   const where: Prisma.CustomerWhereInput = { storeId };
   const and: Prisma.CustomerWhereInput[] = [];
 
@@ -49,8 +52,17 @@ export async function resolveTargets(
   }
   if (and.length > 0) where.AND = and;
 
+  return where;
+}
+
+/** 条件に合致する顧客を抽出 */
+export async function resolveTargets(
+  storeId: string,
+  rules: SegmentRules,
+  now = new Date()
+): Promise<Customer[]> {
   const customers = await prisma.customer.findMany({
-    where,
+    where: buildTargetWhere(storeId, rules, now),
     orderBy: { lastVisitAt: "desc" },
   });
 
@@ -63,9 +75,22 @@ export async function resolveTargets(
   return customers;
 }
 
-export async function countTargets(storeId: string, rules: SegmentRules, now = new Date()): Promise<number> {
-  const targets = await resolveTargets(storeId, rules, now);
-  return targets.length;
+/**
+ * 条件に合致する顧客の人数を数える。
+ * 誕生月フィルタが無ければDBのcountで数えられる（顧客レコードをメモリに載せない）。
+ * 誕生月フィルタがある場合だけは、JST基準の月比較をDBで表現できないため
+ * 従来どおり顧客を取得してJS側で絞り込んだ件数を返す。
+ */
+export async function countTargets(
+  storeId: string,
+  rules: SegmentRules,
+  now = new Date()
+): Promise<number> {
+  if (rules.birthdayMonth !== undefined) {
+    const targets = await resolveTargets(storeId, rules, now);
+    return targets.length;
+  }
+  return prisma.customer.count({ where: buildTargetWhere(storeId, rules, now) });
 }
 
 /** 条件を日本語の説明文に変換（UI表示用） */

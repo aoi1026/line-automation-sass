@@ -9,6 +9,7 @@ import type { CampaignStatus } from "@prisma/client";
 import { addHours } from "@/lib/jst";
 import { formatNumber } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isoToJstInput, jstInputToIso, nowJstInput } from "./jst-datetime";
+
+/** 対象人数の算出に使うキャンペーンの抽出条件（GET /api/campaigns の一部） */
+type CampaignTarget = {
+  id: string;
+  segmentId: string | null;
+  filters: unknown;
+};
+
+/** セグメントの抽出条件（GET /api/segments の一部） */
+type SegmentRulesRow = {
+  id: string;
+  rules: unknown;
+};
 
 /**
  * ステータスに応じたキャンペーン操作ボタン。
@@ -39,6 +53,56 @@ export function CampaignActions({
   const [busy, setBusy] = React.useState(false);
   const [scheduleOpen, setScheduleOpen] = React.useState(false);
   const [scheduledLocal, setScheduledLocal] = React.useState("");
+  const [sendOpen, setSendOpen] = React.useState(false);
+  const [targetCount, setTargetCount] = React.useState<number | null>(null);
+  const [counting, setCounting] = React.useState(false);
+
+  /**
+   * 配信対象の人数を数える。
+   * キャンペーンの抽出条件（保存済みセグメント / 条件指定）を取り出し、
+   * セグメントのプレビューAPIで現時点の対象人数を取得する。
+   * 取得できなかった場合は人数なしで確認ダイアログを表示する。
+   */
+  async function loadTargetCount() {
+    setCounting(true);
+    setTargetCount(null);
+    try {
+      const res = await fetch("/api/campaigns");
+      if (!res.ok) return;
+      const campaigns: CampaignTarget[] = await res.json();
+      const target = campaigns.find((c) => c.id === campaign.id);
+      if (!target) return;
+
+      let rules: unknown = target.filters ?? {};
+      if (target.segmentId) {
+        const segRes = await fetch("/api/segments");
+        if (!segRes.ok) return;
+        const segments: SegmentRulesRow[] = await segRes.json();
+        const segment = segments.find((sg) => sg.id === target.segmentId);
+        if (!segment) return;
+        rules = segment.rules ?? {};
+      }
+
+      const previewRes = await fetch("/api/segments/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rules }),
+      });
+      if (!previewRes.ok) return;
+      const data: { count?: number } = await previewRes.json();
+      if (typeof data.count === "number") setTargetCount(data.count);
+    } catch {
+      // 通信に失敗しても、人数を伏せた確認ダイアログで操作を続けられるようにする
+    } finally {
+      setCounting(false);
+    }
+  }
+
+  /** 確認ダイアログを開き、対象人数の取得を始める */
+  function openSend() {
+    setSendOpen(true);
+    void loadTargetCount();
+  }
 
   function openSchedule() {
     setScheduledLocal(isoToJstInput(addHours(new Date(), 1)));
@@ -76,10 +140,6 @@ export function CampaignActions({
   }
 
   async function handleSendNow() {
-    const ok = window.confirm(
-      `「${campaign.title}」を今すぐ配信します。\n対象のお客様のLINEへメッセージが送信され、送信後の取り消しはできません。`,
-    );
-    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/campaigns/${campaign.id}/send`, {
@@ -96,6 +156,7 @@ export function CampaignActions({
           data.skipped ?? 0,
         )}件）`,
       );
+      setSendOpen(false);
       router.refresh();
     } finally {
       setBusy(false);
@@ -185,7 +246,7 @@ export function CampaignActions({
         <Button
           size="sm"
           className="h-11"
-          onClick={handleSendNow}
+          onClick={openSend}
           disabled={busy}
           aria-label={`「${campaign.title}」を今すぐ配信`}
         >
@@ -219,6 +280,30 @@ export function CampaignActions({
           削除
         </Button>
       )}
+
+      {/* 今すぐ配信の確認（対象人数を明示してから送信する） */}
+      <ConfirmDialog
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        title={`「${campaign.title}」を今すぐ配信`}
+        description={
+          counting
+            ? "対象人数を計算しています…"
+            : targetCount !== null
+              ? `${formatNumber(targetCount)}名のお客様にLINEを送信します。この操作は取り消せません。`
+              : "対象のお客様にLINEを送信します。この操作は取り消せません。"
+        }
+        confirmLabel="配信する"
+        destructive
+        loading={counting || busy}
+        onConfirm={handleSendNow}
+      >
+        {!counting && targetCount === 0 && (
+          <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            条件に合うお客様がいないため、メッセージは送信されません。配信対象をご確認ください。
+          </p>
+        )}
+      </ConfirmDialog>
 
       <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
         <DialogContent className="max-w-sm">

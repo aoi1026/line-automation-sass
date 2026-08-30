@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -121,6 +122,8 @@ export function CampaignForm({
   );
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [submitting, setSubmitting] = React.useState(false);
+  // 「今すぐ配信」の確認ダイアログ（押し間違いによる一斉配信を防ぐ）
+  const [sendConfirmOpen, setSendConfirmOpen] = React.useState(false);
 
   const clearError = (key: keyof FieldErrors) => {
     setErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
@@ -184,7 +187,11 @@ export function CampaignForm({
     });
   }
 
-  async function handleSubmit() {
+  /**
+   * 入力チェック。問題がなければ配信予定日時（ISO文字列 / 予約でなければ null）を返す。
+   * 「今すぐ配信」でも確認ダイアログを開く前に検証したいため、保存処理から切り出している。
+   */
+  function validate(): { ok: boolean; scheduledAtIso: string | null } {
     const nextErrors: FieldErrors = {};
     if (!title.trim()) nextErrors.title = "タイトルを入力してください";
     if (!content.trim()) {
@@ -208,9 +215,24 @@ export function CampaignForm({
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       toast.error("入力内容をご確認ください");
+      return { ok: false, scheduledAtIso: null };
+    }
+    return { ok: true, scheduledAtIso };
+  }
+
+  /** 保存ボタン。今すぐ配信のときは確認ダイアログを挟む */
+  function handleSubmit() {
+    const { ok, scheduledAtIso } = validate();
+    if (!ok) return;
+    if (sendMode === "now") {
+      setSendConfirmOpen(true);
       return;
     }
+    void save(scheduledAtIso);
+  }
 
+  /** キャンペーンを保存し、「今すぐ配信」なら続けて配信する */
+  async function save(scheduledAtIso: string | null) {
     const payload = {
       title: title.trim(),
       content,
@@ -267,6 +289,7 @@ export function CampaignForm({
       } else {
         toast.success("下書きを保存しました");
       }
+      setSendConfirmOpen(false);
       router.push(`/dashboard/campaigns/${id}`);
       router.refresh();
     } finally {
@@ -287,6 +310,12 @@ export function CampaignForm({
         ? "予約中…"
         : "保存中…";
   const remaining = CONTENT_MAX - content.length;
+  // 確認ダイアログでは、実際に送信されるお客様の人数を必ず明示する
+  const sendConfirmDescription = counting
+    ? "対象人数を計算しています…"
+    : count !== null
+      ? `${formatNumber(count)}名のお客様にLINEを送信します。この操作は取り消せません。`
+      : "対象のお客様にLINEを送信します。この操作は取り消せません。";
 
   return (
     <div className="max-w-3xl space-y-5">
@@ -661,7 +690,9 @@ export function CampaignForm({
             </label>
             {sendMode === "now" && (
               <p className="ml-6 text-xs text-gray-500">
-                保存後、すぐに配信を開始します。送信したメッセージは取り消せません。
+                {count !== null && !counting
+                  ? `保存後、対象${formatNumber(count)}名のお客様へすぐに配信を開始します。送信したメッセージは取り消せません。`
+                  : "保存後、すぐに配信を開始します。送信したメッセージは取り消せません。"}
               </p>
             )}
           </fieldset>
@@ -683,6 +714,24 @@ export function CampaignForm({
           {submitting ? submittingLabel : submitLabel}
         </Button>
       </div>
+
+      {/* 今すぐ配信の確認（押し間違いによる一斉配信を防ぐ） */}
+      <ConfirmDialog
+        open={sendConfirmOpen}
+        onOpenChange={setSendConfirmOpen}
+        title="今すぐ配信"
+        description={sendConfirmDescription}
+        confirmLabel="配信する"
+        destructive
+        loading={counting || submitting}
+        onConfirm={() => save(null)}
+      >
+        {!counting && count === 0 && (
+          <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            条件に合うお客様がいないため、メッセージは送信されません。配信対象をご確認ください。
+          </p>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }
