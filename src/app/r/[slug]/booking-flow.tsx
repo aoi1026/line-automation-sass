@@ -198,7 +198,11 @@ export function BookingFlow({
   });
   const [errors, setErrors] = React.useState<Partial<Record<keyof CustomerForm, string>>>({});
   const [submitting, setSubmitting] = React.useState(false);
-  const [done, setDone] = React.useState<{ publicToken: string } | null>(null);
+  const [done, setDone] = React.useState<{
+    publicToken: string;
+    lineBasicId: string | null;
+    lineLinkCode: string | null;
+  } | null>(null);
   const fetchSeq = React.useRef(0);
 
   const goTo = (next: number) => {
@@ -305,7 +309,12 @@ export function BookingFlow({
           note: form.note.trim(),
         }),
       });
-      const json = (await res.json()) as { publicToken?: string; error?: string };
+      const json = (await res.json()) as {
+        publicToken?: string;
+        lineBasicId?: string | null;
+        lineLinkCode?: string | null;
+        error?: string;
+      };
       if (!res.ok || !json.publicToken) {
         toast.error(json.error ?? "ご予約の送信に失敗しました。もう一度お試しください");
         if (res.status === 409 && dateSel) {
@@ -315,7 +324,11 @@ export function BookingFlow({
         }
         return;
       }
-      setDone({ publicToken: json.publicToken });
+      setDone({
+        publicToken: json.publicToken,
+        lineBasicId: json.lineBasicId ?? null,
+        lineLinkCode: json.lineLinkCode ?? null,
+      });
       if (typeof window !== "undefined") window.scrollTo({ top: 0 });
     } catch {
       toast.error("ご予約の送信に失敗しました。通信環境をご確認ください");
@@ -370,13 +383,47 @@ export function BookingFlow({
           このページはブックマークしておくと、あとから予約内容をご確認いただけます。
         </p>
 
-        <div className="mt-5 flex items-start gap-2 rounded-lg bg-brand-light/70 p-3.5 text-xs leading-relaxed text-gray-600">
-          <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-          <p>
-            LINEをご連携いただいているお客様には、{storeName}
-            より確認メッセージをお送りいたします。
-          </p>
-        </div>
+        {done.lineBasicId && done.lineLinkCode ? (
+          <section
+            aria-labelledby="line-link-title"
+            className="mt-5 rounded-xl border border-brand/30 bg-brand-light/60 p-4"
+          >
+            <h3 id="line-link-title" className="text-sm font-bold text-gray-900">
+              LINEで予約のお知らせを受け取る
+            </h3>
+            <p className="mt-1.5 text-xs leading-relaxed text-gray-600">
+              {storeName}のLINEを友だち追加して、下の番号をトークに送っていただくと、
+              予約の確認や前日のリマインドをLINEでお届けします。
+            </p>
+
+            <a
+              href={`https://line.me/R/ti/p/${encodeURIComponent(done.lineBasicId)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonVariants({ size: "lg" }), "mt-3 w-full")}
+            >
+              LINEで友だち追加
+            </a>
+
+            <div className="mt-3 rounded-lg border border-dashed border-brand/40 bg-white px-3 py-2.5 text-center">
+              <p className="text-xs text-gray-500">トークに送る番号</p>
+              <p className="mt-0.5 font-mono text-2xl font-bold tracking-[0.3em] text-gray-900">
+                {done.lineLinkCode}
+              </p>
+            </div>
+            <p className="mt-2 text-center text-xs text-gray-500">
+              この番号の有効期限は24時間です。
+            </p>
+          </section>
+        ) : (
+          <div className="mt-5 flex items-start gap-2 rounded-lg bg-brand-light/70 p-3.5 text-xs leading-relaxed text-gray-600">
+            <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+            <p>
+              LINEをご連携いただいているお客様には、{storeName}
+              より確認メッセージをお送りいたします。
+            </p>
+          </div>
+        )}
       </div>
     );
   }

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -41,8 +42,23 @@ export type TemplateFormInitial = {
 /** LINEのテキストメッセージの上限文字数 */
 const CONTENT_MAX = 5000;
 
-function buildSampleVars(storeName: string): TemplateVars {
+/**
+ * プレビュー用のサンプル変数。
+ * クーポン・アンケートは自動配信設定で紐付けたときだけ値が入るため、
+ * 未設定のときの見え方も確認できるように出し分ける。
+ */
+/** 設定によって有無が変わるため、出し分けブロックを用意する項目 */
+const OPTIONAL_BLOCK_KEYS = ["クーポンリンク", "アンケートリンク"] as const;
+
+function buildSampleVars(storeName: string, withOptional: boolean): TemplateVars {
+  const optional: TemplateVars = withOptional
+    ? {
+        クーポンリンク: "https://repinavi.example/c/sample",
+        アンケートリンク: "https://repinavi.example/s/sample",
+      }
+    : {};
   return {
+    ...optional,
     お客様名: "山田花子",
     店舗名: storeName,
     予約日時: "2026年9月1日(火) 14:30",
@@ -50,8 +66,6 @@ function buildSampleVars(storeName: string): TemplateVars {
     担当者名: "佐藤",
     前回来店日: "2026年7月15日(水)",
     経過日数: "42",
-    クーポンリンク: "https://repinavi.example/c/sample",
-    アンケートリンク: "https://repinavi.example/s/sample",
     予約リンク: "https://repinavi.example/r/sample",
     予約確認リンク: "https://repinavi.example/v/sample",
   };
@@ -93,15 +107,35 @@ export function TemplateFormDialog({
     }
   }, [open, initial, defaultKind]);
 
+  const [withOptional, setWithOptional] = React.useState(true);
   const sampleVars = React.useMemo(
-    () => buildSampleVars(storeName),
-    [storeName],
+    () => buildSampleVars(storeName, withOptional),
+    [storeName, withOptional],
   );
   const preview = React.useMemo(
     () => renderTemplate(content, sampleVars),
     [content, sampleVars],
   );
   const remaining = CONTENT_MAX - content.length;
+
+  /** {{#キー}}…{{/キー}} の出し分けブロックを挿入する */
+  function insertBlock(key: string) {
+    const token = `{{#${key}}}\n{${key}}\n{{/${key}}}\n`;
+    const el = textareaRef.current;
+    if (!el) {
+      setContent((c) => c + token);
+      return;
+    }
+    const start = el.selectionStart ?? content.length;
+    const end = el.selectionEnd ?? start;
+    const next = content.slice(0, start) + token + content.slice(end);
+    setContent(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + token.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
 
   function insertPlaceholder(key: string) {
     const token = `{${key}}`;
@@ -323,13 +357,46 @@ export function TemplateFormDialog({
                   </button>
                 ))}
               </div>
+              <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50/60 p-2.5">
+                <p className="text-xs text-gray-600">
+                  クーポンやアンケートは、自動配信設定で紐付けたときだけ本文に入ります。
+                  紐付けていないときに文ごと消したい場合は「出し分け」を使ってください。
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {OPTIONAL_BLOCK_KEYS.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => insertBlock(key)}
+                      aria-label={`${key}の出し分けブロックを挿入`}
+                      className="rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                    >
+                      {`${key}の出し分け`}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
           <div>
-            <p className="text-sm font-medium text-gray-700">プレビュー</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-gray-700">プレビュー</p>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="template-preview-optional" className="text-xs text-gray-500">
+                  クーポン・アンケートあり
+                </Label>
+                <Switch
+                  id="template-preview-optional"
+                  checked={withOptional}
+                  onCheckedChange={setWithOptional}
+                  aria-label="クーポン・アンケートを設定した場合の見え方に切り替える"
+                />
+              </div>
+            </div>
             <p className="mt-1 text-xs text-gray-500">
               サンプルのお客様情報で、お客様のLINE画面での見え方を表示しています。
+              クーポンやアンケートを紐付けていない場合の見え方は、上の切り替えでご確認ください。
             </p>
             {/* LINEのトーク画面を模した表示（背景はLINEの標準壁紙に近い色） */}
             <div className="mt-1.5 rounded-xl bg-[#8cabd8] p-3">

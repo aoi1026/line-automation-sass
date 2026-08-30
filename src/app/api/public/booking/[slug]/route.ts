@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { jsonError, notFound, parseBody } from "@/lib/api";
 import { addMinutes, formatJstDateTime, fromJst } from "@/lib/jst";
 import { notify } from "@/lib/notifications";
+import { generateLinkCode } from "@/lib/utils";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { computeDaySlots } from "./shared";
 
@@ -183,5 +184,33 @@ export async function POST(
   // 店舗が「確定する」操作を行った時点で BOOKING_CONFIRMATION が送信される
   // （送信元: PATCH /api/reservations/[id] の confirm）。二重送信の防止。
 
-  return NextResponse.json({ publicToken: reservation.publicToken });
+  // Web予約のお客様はまだLINE未連携のことがほとんどで、そのままでは
+  // 予約確認もリマインドも届かない。友だち追加後にトークへ送っていただく
+  // 連携コードを発行し、完了画面でご案内する。
+  let lineLinkCode: string | null = null;
+  if (!customer.lineUserId && store.lineBasicId) {
+    const stillValid =
+      customer.linkCode &&
+      customer.linkCodeExpiresAt &&
+      customer.linkCodeExpiresAt > new Date();
+    if (stillValid) {
+      lineLinkCode = customer.linkCode;
+    } else {
+      const code = generateLinkCode();
+      await prisma.customer.update({
+        where: { id: customer.id },
+        data: {
+          linkCode: code,
+          linkCodeExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+      lineLinkCode = code;
+    }
+  }
+
+  return NextResponse.json({
+    publicToken: reservation.publicToken,
+    lineBasicId: store.lineBasicId || null,
+    lineLinkCode,
+  });
 }
