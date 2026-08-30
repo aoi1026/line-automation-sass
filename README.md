@@ -226,8 +226,8 @@ cp .env.example .env
 # 3. PostgreSQL を起動
 npm run db:up
 
-# 4. スキーマを反映
-npm run db:push
+# 4. スキーマを反映（マイグレーション適用）
+npm run db:deploy
 
 # 5. デモデータを投入
 npm run db:seed
@@ -380,7 +380,7 @@ npm run start      # 本番サーバー
 npm run typecheck  # 型チェック
 npm run test       # ユニットテスト（vitest）
 npm run db:up      # PostgreSQL を起動
-npm run db:push    # スキーマ反映
+npm run db:deploy    # スキーマ反映
 npm run db:seed    # デモデータ投入
 npm run db:studio  # Prisma Studio
 ```
