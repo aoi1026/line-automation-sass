@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { AUTOMATION_KINDS, DEFAULT_TEMPLATES, TEMPLATE_PLACEHOLDERS } from "@/lib/constants";
 
-/** renderTemplate と同じ規則で本文中のプレースホルダーを抽出する */
+/** 出し分けブロック {{#キー}} … {{/キー}} のキーを抽出する */
+function extractBlockKeys(content: string): string[] {
+  return [...content.matchAll(/\{\{#([^}\n]+)\}\}/g)].map((m) => m[1]);
+}
+
+/** renderTemplate と同じ規則で本文中のプレースホルダーを抽出する（出し分けの記号は除く） */
 function extractPlaceholders(content: string): string[] {
+  const withoutBlocks = content.replace(/\{\{[#/][^}\n]+\}\}/g, "");
   const keys: string[] = [];
-  for (const match of content.matchAll(/\{([^{}\n]+)\}/g)) {
+  for (const match of withoutBlocks.matchAll(/\{([^{}\n]+)\}/g)) {
     keys.push(match[1]);
   }
   return keys;
@@ -19,6 +25,22 @@ describe("DEFAULT_TEMPLATES", () => {
       for (const key of used) {
         expect(validKeys, `${template.name} の {${key}} が未定義です`).toContain(key);
       }
+    }
+  });
+
+  it("出し分けブロックのキーも TEMPLATE_PLACEHOLDERS に定義済み", () => {
+    for (const template of DEFAULT_TEMPLATES) {
+      for (const key of extractBlockKeys(template.content)) {
+        expect(validKeys, `${template.name} の出し分け {{#${key}}} が未定義です`).toContain(key);
+      }
+    }
+  });
+
+  it("出し分けブロックは開始と終了が対応している", () => {
+    for (const template of DEFAULT_TEMPLATES) {
+      const opens = extractBlockKeys(template.content);
+      const closes = [...template.content.matchAll(/\{\{\/([^}\n]+)\}\}/g)].map((m) => m[1]);
+      expect(closes.sort(), `${template.name} の出し分けが閉じていません`).toEqual(opens.sort());
     }
   });
 

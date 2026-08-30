@@ -67,3 +67,56 @@ export function parseCsv(text: string): string[][] {
   if (cell !== "" || row.length > 0) { row.push(unescapeCell(cell)); rows.push(row); }
   return rows.filter((r) => r.some((c) => c.trim() !== ""));
 }
+
+/**
+ * parseCsv と同じ解析を行いつつ、各行がCSVの何行目だったかを保持して返す。
+ *
+ * 取り込み結果で「◯行目を取り込めませんでした」と案内する際、空行を
+ * 詰めた後の番号で表示すると、利用者が実際のファイルの行を見つけられない。
+ * lineNumber は1始まり（ヘッダー行が1）。
+ */
+export function parseCsvWithLineNumbers(
+  text: string
+): { lineNumber: number; cells: string[] }[] {
+  const src = text.replace(/^\uFEFF/, "");
+  const out: { lineNumber: number; cells: string[] }[] = [];
+  let row: string[] = [];
+  let cell = "";
+  let inQuotes = false;
+  let lineNumber = 1;
+  let rowStartLine = 1;
+
+  const flushRow = () => {
+    row.push(unescapeCell(cell));
+    if (row.some((c) => c.trim() !== "")) out.push({ lineNumber: rowStartLine, cells: row });
+    row = [];
+    cell = "";
+  };
+
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (src[i + 1] === '"') { cell += '"'; i++; }
+        else inQuotes = false;
+      } else {
+        // クォート内の改行も行番号としては1行進む
+        if (ch === "\n") lineNumber++;
+        cell += ch;
+      }
+      continue;
+    }
+    if (ch === '"') { inQuotes = true; continue; }
+    if (ch === ",") { row.push(unescapeCell(cell)); cell = ""; continue; }
+    if (ch === "\r") continue;
+    if (ch === "\n") {
+      flushRow();
+      lineNumber++;
+      rowStartLine = lineNumber;
+      continue;
+    }
+    cell += ch;
+  }
+  if (cell !== "" || row.length > 0) flushRow();
+  return out;
+}

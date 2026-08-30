@@ -36,10 +36,14 @@ openssl rand -base64 32   # CRON_SECRET 用
 
 ```bash
 npm ci                        # package-lock.json どおりに厳密インストール
-npx prisma migrate deploy     # マイグレーション適用（初回は npx prisma db push でも可）
+npx prisma migrate deploy     # マイグレーション適用（prisma/migrations を適用する）
 npm run build
 npm start                     # 既定で 0.0.0.0:3000
 ```
+
+> 既にスキーマが入っているデータベースへ初めて `migrate deploy` を使う場合は、
+> 一度だけ `npx prisma migrate resolve --applied 0_init` でベースラインを記録してから
+> 実行してください（既存テーブルへの再作成を防ぐため）。
 
 初回のみ、動作確認用のデモデータを入れる場合:
 

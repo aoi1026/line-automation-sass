@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Customer, Reservation, Service, StaffMember, Store } from "@prisma/client";
 import { buildCustomerVars, buildReservationVars, renderTemplate } from "@/lib/templates";
+import { DEFAULT_TEMPLATES } from "@/lib/constants";
 import { fromJst } from "@/lib/jst";
 
 // getAppUrl() の結果を決定的にするため、テスト中は APP_URL を固定する
@@ -145,5 +146,99 @@ describe("buildReservationVars", () => {
 
     const vars = buildReservationVars(store, customer, reservation);
     expect(vars["予約日時"]).toBe("2026年9月1日(火) 00:00");
+  });
+});
+
+describe("条件ブロック（設定されていない項目の出し分け）", () => {
+  it("値があるときはブロックの中身を残す", () => {
+    const out = renderTemplate(
+      "こんにちは\n\n{{#クーポンリンク}}クーポンです\n{クーポンリンク}\n{{/クーポンリンク}}\nまたお越しください",
+      { "クーポンリンク": "https://example.com/c/abc" }
+    );
+    expect(out).toContain("クーポンです");
+    expect(out).toContain("https://example.com/c/abc");
+  });
+
+  it("値が無いときはブロックごと消す（空リンクの文面を送らない）", () => {
+    const out = renderTemplate(
+      "こんにちは\n\n{{#クーポンリンク}}クーポンです\n{クーポンリンク}\n{{/クーポンリンク}}\nまたお越しください",
+      {}
+    );
+    expect(out).not.toContain("クーポンです");
+    expect(out).not.toContain("{クーポンリンク}");
+    expect(out).toContain("こんにちは");
+    expect(out).toContain("またお越しください");
+  });
+
+  it("空文字の値も「無い」として扱う", () => {
+    const out = renderTemplate("{{#アンケートリンク}}回答はこちら{アンケートリンク}{{/アンケートリンク}}", {
+      "アンケートリンク": "   ",
+    });
+    expect(out).toBe("");
+  });
+
+  it("複数のブロックをそれぞれ独立して判定する", () => {
+    const tpl =
+      "本文\n{{#アンケートリンク}}アンケート{アンケートリンク}\n{{/アンケートリンク}}{{#クーポンリンク}}クーポン{クーポンリンク}\n{{/クーポンリンク}}締め";
+    const out = renderTemplate(tpl, { "クーポンリンク": "https://example.com/c/x" });
+    expect(out).not.toContain("アンケート");
+    expect(out).toContain("クーポン");
+    expect(out).toContain("締め");
+  });
+
+  it("出し分けで生じた余分な空行を残さない", () => {
+    const out = renderTemplate(
+      "一行目\n\n{{#クーポンリンク}}クーポン\n{{/クーポンリンク}}\n\n最終行",
+      {}
+    );
+    expect(out).not.toMatch(/\n{3,}/);
+  });
+});
+
+describe("標準テンプレートが未設定時に壊れないこと", () => {
+  it("来店お礼: アンケートもクーポンも未設定なら、それらの文が残らない", () => {
+    const tpl = DEFAULT_TEMPLATES.find((t) => t.kind === "THANKS")!;
+    const out = renderTemplate(tpl.content, {
+      "お客様名": "山田 花子",
+      "店舗名": "サロン ルミエール",
+    });
+    expect(out).not.toContain("アンケート");
+    expect(out).not.toContain("クーポン");
+    expect(out).not.toMatch(/\{[^}]+\}/); // 未解決のプレースホルダーが残らない
+    expect(out).toContain("本日はご来店いただき");
+  });
+
+  it("来店お礼: クーポンを添付したときはリンクが本文に入る", () => {
+    const tpl = DEFAULT_TEMPLATES.find((t) => t.kind === "THANKS")!;
+    const out = renderTemplate(tpl.content, {
+      "お客様名": "山田 花子",
+      "店舗名": "サロン ルミエール",
+      "クーポンリンク": "https://example.com/c/token",
+    });
+    expect(out).toContain("https://example.com/c/token");
+  });
+
+  it("再来店リマインド: クーポンを添付したときはリンクが本文に入る", () => {
+    const tpl = DEFAULT_TEMPLATES.find((t) => t.kind === "REBOOKING")!;
+    const out = renderTemplate(tpl.content, {
+      "お客様名": "山田 花子",
+      "店舗名": "サロン ルミエール",
+      "前回来店日": "2026年7月1日(水)",
+      "経過日数": "45",
+      "予約リンク": "https://example.com/r/demo",
+      "クーポンリンク": "https://example.com/c/token",
+    });
+    expect(out).toContain("https://example.com/c/token");
+  });
+
+  it("誕生日: クーポン未設定でも文面が壊れない", () => {
+    const tpl = DEFAULT_TEMPLATES.find((t) => t.kind === "BIRTHDAY")!;
+    const out = renderTemplate(tpl.content, {
+      "お客様名": "山田 花子",
+      "店舗名": "サロン ルミエール",
+    });
+    expect(out).not.toContain("クーポン");
+    expect(out).not.toMatch(/\{[^}]+\}/);
+    expect(out).toContain("お誕生日おめでとうございます");
   });
 });

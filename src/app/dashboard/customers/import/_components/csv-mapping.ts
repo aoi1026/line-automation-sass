@@ -1,4 +1,4 @@
-import { parseCsv, toCsv } from "@/lib/csv";
+import { parseCsvWithLineNumbers, toCsv } from "@/lib/csv";
 
 /** 1回のインポートで取り込める最大行数（APIと合わせる） */
 export const MAX_IMPORT_ROWS = 1000;
@@ -146,10 +146,11 @@ export function normalizeBirthday(value: string): string | null {
  * @param existingByPhone 既存顧客の「正規化した電話番号 → 氏名」
  */
 export function parseCustomerCsv(text: string, existingByPhone: Record<string, string>): ParseResult {
-  const table = parseCsv(text);
-  if (table.length === 0) return { ok: false, error: "ファイルに読み取れる行がありませんでした。" };
+  // 空行を飛ばしても「CSVの何行目か」がわかるよう、行番号付きで解析する
+  const parsed = parseCsvWithLineNumbers(text);
+  if (parsed.length === 0) return { ok: false, error: "ファイルに読み取れる行がありませんでした。" };
 
-  const header = table[0].map(normalizeHeader);
+  const header = parsed[0].cells.map(normalizeHeader);
   const indexOf: Partial<Record<ImportField, number>> = {};
   for (const column of IMPORT_COLUMNS) {
     const candidates = [column.label, ...column.aliases].map(normalizeHeader);
@@ -164,7 +165,7 @@ export function parseCustomerCsv(text: string, existingByPhone: Record<string, s
     };
   }
 
-  const body = table.slice(1);
+  const body = parsed.slice(1);
   if (body.length === 0) {
     return { ok: false, error: "見出し行のみで、取り込むデータがありませんでした。" };
   }
@@ -183,8 +184,10 @@ export function parseCustomerCsv(text: string, existingByPhone: Record<string, s
   let updateCount = 0;
   let errorCount = 0;
 
-  body.forEach((raw, i) => {
-    const rowNumber = i + 2; // 見出し行を1行目として数える
+  body.forEach((entry) => {
+    const raw = entry.cells;
+    // CSVファイル上の実際の行番号（空行を詰めた後の番号ではない）
+    const rowNumber = entry.lineNumber;
     const name = cell(raw, "name");
     const phone = cell(raw, "phone");
     const rawGender = cell(raw, "gender");

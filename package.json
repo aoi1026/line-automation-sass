@@ -9,6 +9,8 @@
     "typecheck": "tsc --noEmit",
     "db:up": "docker compose up -d db",
     "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "test": "vitest run",
