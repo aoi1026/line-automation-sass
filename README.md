@@ -404,14 +404,6 @@ npm run test
 
 ---
 
-## ドキュメント
-
-| ドキュメント | 内容 |
-| --- | --- |
-| [docs/DEPLOY.md](docs/DEPLOY.md) | 本番デプロイ手順（環境変数・cron・LINE Webhook・nginx・バックアップ） |
-| [docs/OPERATIONS.md](docs/OPERATIONS.md) | 運用ガイド（自動配信が届かないときの確認手順・障害対応・定期メンテナンス） |
-| [docs/CONTRACT.md](docs/CONTRACT.md) | 実装規約（アーキテクチャ・命名・テナント分離の方針） |
-
 ## ライセンス / 著作権
 
 © 2026 [info.aoi-webstudio.com](https://info.aoi-webstudio.com) — All rights reserved.
