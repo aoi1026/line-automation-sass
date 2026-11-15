@@ -4,6 +4,5 @@ node_modules/
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
-
-# 検証用の使い捨てスクリプト
-scripts/_*.ts
+docs/*
+docs/
